@@ -10,7 +10,7 @@ import '../widgets/message_bubble.dart';
 import '../widgets/round_counter.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/favorability_display.dart';
-import '../chat_controller.dart';
+import '../basic_chat_controller.dart';
 
 class ChatPage extends StatefulWidget {
   final CharacterModel character;
