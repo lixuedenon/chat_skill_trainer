@@ -1,10 +1,11 @@
-// lib/shared/services/storage_service.dart (完善版)
+// lib/shared/services/storage_service.dart (完整版)
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../core/models/user_model.dart';
 import '../../core/models/conversation_model.dart';
 import '../../core/models/analysis_model.dart';
+import '../../core/models/companion_model.dart';
 
 class StorageService {
   static SharedPreferences? _prefs;
@@ -13,6 +14,7 @@ class StorageService {
   static const String _currentUserKey = 'current_user';
   static const String _conversationsKey = 'conversations';
   static const String _analysisReportsKey = 'analysis_reports';
+  static const String _companionsKey = 'companions';
   static const String _appThemeKey = 'app_theme';
   static const String _firstLaunchKey = 'first_launch';
 
@@ -197,6 +199,108 @@ class StorageService {
     await _ensureInitialized();
     final reportsJson = json.encode(reports.map((report) => report.toJson()).toList());
     return await _prefs!.setString(_analysisReportsKey, reportsJson);
+  }
+
+  // ========== AI伴侣相关 ==========
+
+  static Future<List<CompanionModel>> getCompanions() async {
+    await _ensureInitialized();
+    final companionsJson = _prefs!.getString(_companionsKey);
+    if (companionsJson == null) return [];
+
+    try {
+      final List<dynamic> companionsList = json.decode(companionsJson);
+      return companionsList
+          .map((data) => CompanionModel.fromJson(data))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<List<CompanionModel>> getUserCompanions(String userId) async {
+    final allCompanions = await getCompanions();
+    // 简化版本：返回所有伴侣（实际应用中可能需要根据用户ID过滤）
+    return allCompanions;
+  }
+
+  static Future<bool> saveCompanion(CompanionModel companion) async {
+    final companions = await getCompanions();
+
+    // 查找并更新已存在的伴侣，或添加新伴侣
+    final index = companions.indexWhere((comp) => comp.id == companion.id);
+    if (index >= 0) {
+      companions[index] = companion;
+    } else {
+      companions.add(companion);
+    }
+
+    await _ensureInitialized();
+    final companionsJson = json.encode(companions.map((comp) => comp.toJson()).toList());
+    return await _prefs!.setString(_companionsKey, companionsJson);
+  }
+
+  static Future<CompanionModel?> getCompanion(String companionId) async {
+    final companions = await getCompanions();
+    try {
+      return companions.firstWhere((comp) => comp.id == companionId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<bool> deleteCompanion(String companionId) async {
+    final companions = await getCompanions();
+    companions.removeWhere((comp) => comp.id == companionId);
+
+    await _ensureInitialized();
+    final companionsJson = json.encode(companions.map((comp) => comp.toJson()).toList());
+    return await _prefs!.setString(_companionsKey, companionsJson);
+  }
+
+  // ========== 通用数据存储方法（用于伴侣记忆服务等） ==========
+
+  static Future<void> saveData(String key, dynamic data) async {
+    await _ensureInitialized();
+    final jsonStr = json.encode(data);
+    await _prefs!.setString(key, jsonStr);
+  }
+
+  static Future<dynamic> getData(String key) async {
+    await _ensureInitialized();
+    final jsonStr = _prefs!.getString(key);
+    if (jsonStr == null) return null;
+
+    try {
+      return json.decode(jsonStr);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<bool> remove(String key) async {
+    await _ensureInitialized();
+    return await _prefs!.remove(key);
+  }
+
+  static Future<void> setString(String key, String value) async {
+    await _ensureInitialized();
+    await _prefs!.setString(key, value);
+  }
+
+  static Future<String?> getString(String key) async {
+    await _ensureInitialized();
+    return _prefs!.getString(key);
+  }
+
+  static Future<void> setStringList(String key, List<String> value) async {
+    await _ensureInitialized();
+    await _prefs!.setStringList(key, value);
+  }
+
+  static Future<List<String>?> getStringList(String key) async {
+    await _ensureInitialized();
+    return _prefs!.getStringList(key);
   }
 
   // ========== 清理方法 ==========

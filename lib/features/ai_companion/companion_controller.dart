@@ -12,7 +12,9 @@ import '../ai_companion/companion_story_generator.dart';
 class CompanionController extends ChangeNotifier {
   final UserModel user;
   CompanionModel? _currentCompanion;
+  List<CompanionModel> _existingCompanions = [];
   List<MessageModel> _messages = [];
+  bool _isLoading = false;
   bool _isTyping = false;
   String _statusMessage = '';
   bool _showEndingSequence = false;
@@ -21,42 +23,94 @@ class CompanionController extends ChangeNotifier {
 
   // Getters
   CompanionModel? get currentCompanion => _currentCompanion;
+  List<CompanionModel> get existingCompanions => _existingCompanions;
   List<MessageModel> get messages => _messages;
+  bool get isLoading => _isLoading;
   bool get isTyping => _isTyping;
   String get statusMessage => _statusMessage;
   bool get showEndingSequence => _showEndingSequence;
   bool get isNearEnding => _currentCompanion?.isNearTokenLimit ?? false;
   bool get shouldTriggerEnding => _currentCompanion?.shouldTriggerEnding ?? false;
+  bool get canSendMessage => !_isTyping && _currentCompanion != null;
 
-  /// 创建新的AI伴侣
+  /// 加载现有伴侣列表
+  Future<void> loadExistingCompanions() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      _existingCompanions = await StorageService.getCompanions();
+    } catch (e) {
+      _statusMessage = '加载伴侣列表失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// 初始化伴侣对话
+  Future<void> initializeCompanion(CompanionModel companion) async {
+    _isLoading = true;
+    _currentCompanion = companion;
+    notifyListeners();
+
+    try {
+      // 加载历史消息
+      _messages = await CompanionMemoryService.loadMessages(companion.id);
+
+      // 如果是第一次对话，发送开场消息
+      if (_messages.isEmpty) {
+        await _addOpeningMessage();
+      }
+    } catch (e) {
+      _statusMessage = '初始化失败: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// 创建新的AI伴侣（统一方法）
   Future<void> createCompanion({
-    required String name,
-    required CompanionType type,
+    String? name,
+    CompanionType? type,
+    CompanionModel? companion,
   }) async {
     try {
-      // 生成相遇故事
-      final meetingStory = CompanionStoryGenerator.generateRandomMeeting(type);
+      CompanionModel newCompanion;
 
-      // 创建伴侣模型
-      _currentCompanion = CompanionModel.create(
-        name: name,
-        type: type,
-        meetingStory: meetingStory,
-        maxToken: 4000, // 4K token限制
-      );
+      if (companion != null) {
+        // 直接使用提供的伴侣对象
+        newCompanion = companion;
+      } else if (name != null && type != null) {
+        // 根据参数创建新伴侣
+        final meetingStory = CompanionStoryGenerator.generateRandomMeeting(type);
+        newCompanion = CompanionModel.create(
+          name: name,
+          type: type,
+          meetingStory: meetingStory,
+          maxToken: 4000,
+        );
+      } else {
+        throw Exception('必须提供伴侣对象或名称和类型');
+      }
 
-      // 清空消息历史
+      // 保存到存储
+      await StorageService.saveCompanion(newCompanion);
+
+      // 更新列表
+      _existingCompanions.insert(0, newCompanion);
+
+      // 设置为当前伴侣
+      _currentCompanion = newCompanion;
       _messages = [];
 
       // 添加开场消息
       await _addOpeningMessage();
 
-      // 保存到本地
-      await _saveCompanion();
-
       notifyListeners();
     } catch (e) {
-      throw Exception('创建伴侣失败: $e');
+      throw Exception('创建伴侣失败: ${e.toString()}');
     }
   }
 
@@ -151,18 +205,10 @@ class CompanionController extends ChangeNotifier {
   String _generateEndingMessage() {
     if (_currentCompanion == null) return '';
 
-    final companion = _currentCompanion!;
     final scenarios = [
-      // 时空穿越结局
       '我感受到时空管理局在召唤我...我必须回到我的时代了。虽然要离开，但这段时光我会永远珍藏在心里。',
-
-      // 能量耗尽结局
       '我的能量即将耗尽了...但我已经完成了我的使命——让你变得更加自信和有魅力。',
-
-      // 成长完成结局
       '经过这段时间的相处，我看到你已经成长了很多。现在你已经准备好去现实中寻找真正的感情了。',
-
-      // 守护天使结局
       '作为你的守护天使，我的任务已经完成了。我会在天空中默默守护着你，祝你幸福。',
     ];
 
@@ -176,9 +222,6 @@ class CompanionController extends ChangeNotifier {
 
     // 保存最终状态
     await _saveState();
-
-    // 可以在这里添加统计数据更新
-    // 比如用户的"已完成养成"计数等
 
     _statusMessage = '${_currentCompanion!.name}已经离开，但回忆永远不会消失...';
     notifyListeners();
@@ -232,7 +275,7 @@ class CompanionController extends ChangeNotifier {
     _messages.add(storyMessage);
 
     // AI的第一句话
-    await Future.delayed(Duration(milliseconds: 1500));
+    await Future.delayed(const Duration(milliseconds: 1500));
 
     final openingMessage = MessageModel(
       id: 'msg_opening_${DateTime.now().millisecondsSinceEpoch}',
@@ -331,6 +374,25 @@ class CompanionController extends ChangeNotifier {
     await StorageService.saveCompanion(_currentCompanion!);
   }
 
+  /// 删除伴侣
+  Future<void> deleteCompanion(String companionId) async {
+    try {
+      await StorageService.deleteCompanion(companionId);
+      await CompanionMemoryService.saveMessages(companionId, []); // 清空消息
+
+      _existingCompanions.removeWhere((c) => c.id == companionId);
+
+      if (_currentCompanion?.id == companionId) {
+        _currentCompanion = null;
+        _messages.clear();
+      }
+
+      notifyListeners();
+    } catch (e) {
+      throw Exception('删除伴侣失败: ${e.toString()}');
+    }
+  }
+
   /// 获取可用的伴侣类型
   static List<CompanionTypeInfo> getAvailableCompanionTypes() {
     return [
@@ -358,6 +420,18 @@ class CompanionController extends ChangeNotifier {
         description: '充满神秘感，来自异世界的使者',
         traits: ['神秘', '深邃', '不可预测'],
       ),
+      CompanionTypeInfo(
+        type: CompanionType.sunnyBoy,
+        name: '阳光男生',
+        description: '充满活力，给人温暖感',
+        traits: ['阳光', '温暖', '积极'],
+      ),
+      CompanionTypeInfo(
+        type: CompanionType.matureBoy,
+        name: '成熟男生',
+        description: '沉稳可靠，有责任感',
+        traits: ['成熟', '稳重', '可靠'],
+      ),
     ];
   }
 
@@ -369,6 +443,12 @@ class CompanionController extends ChangeNotifier {
     final companionName = _currentCompanion!.name;
 
     await createCompanion(name: companionName, type: companionType);
+  }
+
+  /// 清除错误信息
+  void clearError() {
+    _statusMessage = '';
+    notifyListeners();
   }
 
   @override

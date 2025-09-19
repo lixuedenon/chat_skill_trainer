@@ -3,12 +3,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/companion_model.dart';
+import '../../../core/models/user_model.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../companion_controller.dart';
 import '../companion_story_generator.dart';
 
 class CompanionSelectionPage extends StatefulWidget {
-  const CompanionSelectionPage({Key? key}) : super(key: key);
+  final UserModel? currentUser;
+
+  const CompanionSelectionPage({
+    Key? key,
+    this.currentUser,
+  }) : super(key: key);
 
   @override
   State<CompanionSelectionPage> createState() => _CompanionSelectionPageState();
@@ -22,7 +28,9 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
   @override
   void initState() {
     super.initState();
-    _controller = CompanionController();
+    // 创建一个临时用户，如果没有提供currentUser
+    final user = widget.currentUser ?? _createDummyUser();
+    _controller = CompanionController(user: user);
     _loadExistingCompanions();
   }
 
@@ -383,8 +391,8 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
         meetingStory: meetingStory,
       );
 
-      // 保存并导航到聊天页面
-      await _controller.createCompanion(companion);
+      // 修复：使用正确的方法调用方式
+      await _controller.createCompanion(companion: companion);
 
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(
@@ -495,6 +503,15 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
     Navigator.of(context).pushNamed(
       '/companion_chat',
       arguments: {'companion': companion},
+    );
+  }
+
+  /// 创建临时用户对象
+  UserModel _createDummyUser() {
+    return UserModel.newUser(
+      id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
+      username: 'temp_user',
+      email: 'temp@example.com',
     );
   }
 }
