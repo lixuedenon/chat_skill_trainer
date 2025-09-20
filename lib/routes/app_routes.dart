@@ -1,4 +1,4 @@
-// lib/routes/app_routes.dart
+// lib/routes/app_routes.dart (修复版)
 
 import 'package:flutter/material.dart';
 import '../features/home/pages/home_page.dart';
@@ -54,7 +54,7 @@ class AppRoutes {
         final args = settings.arguments as Map<String, dynamic>?;
         final user = args?['user'] as UserModel?;
         return MaterialPageRoute(
-          builder: (context) => CharacterGridPage(currentUser: user),
+          builder: (context) => CharacterGridPage(currentUser: user!),
         );
 
       case basicChat:
@@ -76,7 +76,7 @@ class AppRoutes {
         if (args != null && args['companion'] != null) {
           return MaterialPageRoute(
             builder: (context) => CompanionChatPage(
-              companion: args['companion'],
+              companion: args['companion'] as CompanionModel,
             ),
           );
         }
@@ -87,7 +87,8 @@ class AppRoutes {
         if (args != null && args['scenario'] != null) {
           return MaterialPageRoute(
             builder: (context) => CombatTrainingPage(
-              scenario: args['scenario'],
+              scenario: args['scenario'] as String,
+              user: args['user'] as UserModel?,
             ),
           );
         }
@@ -97,8 +98,8 @@ class AppRoutes {
         final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
           builder: (context) => ConfessionAnalysisPage(
-            analysisResult: args?['analysisResult'],
-            chatData: args?['chatData'],
+            analysisResult: args?['analysisResult'] as String?,
+            chatData: args?['chatData'] as List<String>?,
           ),
         );
 
@@ -111,10 +112,15 @@ class AppRoutes {
 
       case analysisDetail:
         final args = settings.arguments as Map<String, dynamic>?;
-        if (args != null && args['conversation'] != null) {
+        if (args != null &&
+            args['conversation'] != null &&
+            args['character'] != null &&
+            args['user'] != null) {
           return MaterialPageRoute(
             builder: (context) => AnalysisDetailPage(
               conversation: args['conversation'] as ConversationModel,
+              character: args['character'] as CharacterModel,
+              user: args['user'] as UserModel,
             ),
           );
         }
