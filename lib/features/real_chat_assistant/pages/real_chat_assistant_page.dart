@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../real_chat_controller.dart';
-import '../social_translator.dart';
-import '../social_radar.dart';
+import '../../../core/models/user_model.dart';
 
 class RealChatAssistantPage extends StatefulWidget {
-  const RealChatAssistantPage({Key? key}) : super(key: key);
+  final UserModel? user;
+
+  const RealChatAssistantPage({Key? key, this.user}) : super(key: key);
 
   @override
   State<RealChatAssistantPage> createState() => _RealChatAssistantPageState();
@@ -23,7 +24,13 @@ class _RealChatAssistantPageState extends State<RealChatAssistantPage>
   @override
   void initState() {
     super.initState();
-    _controller = RealChatController();
+    _controller = RealChatController(
+      user: widget.user ?? UserModel.newUser(
+        id: 'guest',
+        username: 'Guest',
+        email: 'guest@example.com',
+      ),
+    );
     _tabController = TabController(length: 3, vsync: this);
   }
 
@@ -652,8 +659,8 @@ class _RealChatAssistantPageState extends State<RealChatAssistantPage>
   }
 
   Future<void> _generateReply() async {
-    final context = _inputController.text.trim();
-    if (context.isEmpty) {
+    final inputContext = _inputController.text.trim();
+    if (inputContext.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请输入对话上下文')),
       );
@@ -661,7 +668,7 @@ class _RealChatAssistantPageState extends State<RealChatAssistantPage>
     }
 
     try {
-      await _controller.generateReplySuggestions(context);
+      await _controller.generateReplySuggestions(inputContext);
       _inputController.clear();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

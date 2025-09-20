@@ -1,8 +1,8 @@
 // lib/features/anti_pua/anti_pua_controller.dart
 
 import 'package:flutter/foundation.dart';
-import '../../core/constants/scenario_data.dart';
 import '../../core/models/user_model.dart';
+import 'anti_pua_scenarios.dart';
 
 /// 反PUA训练控制器
 class AntiPUAController extends ChangeNotifier {
@@ -112,7 +112,7 @@ class AntiPUAController extends ChangeNotifier {
   /// 获取所有可用的训练分类
   static List<AntiPUACategoryInfo> getAvailableCategories() {
     return [
-      AntiPUACategoryInfo(
+      const AntiPUACategoryInfo(
         id: 'recognition',
         name: 'PUA话术识别',
         description: '学会识别常见的PUA套路和话术',
@@ -123,7 +123,7 @@ class AntiPUAController extends ChangeNotifier {
           '"我从来没遇到过像你这样的人"',
         ],
       ),
-      AntiPUACategoryInfo(
+      const AntiPUACategoryInfo(
         id: 'counter_strategies',
         name: '反击策略训练',
         description: '掌握高情商的反击和应对方法',
@@ -134,7 +134,7 @@ class AntiPUAController extends ChangeNotifier {
           '情绪操控识别',
         ],
       ),
-      AntiPUACategoryInfo(
+      const AntiPUACategoryInfo(
         id: 'self_protection',
         name: '自我保护技能',
         description: '学会保护自己的情感和心理健康',
@@ -208,7 +208,7 @@ class AntiPUAAnswer {
   final int selectedStrategy;
   final DateTime timestamp;
 
-  AntiPUAAnswer({
+  const AntiPUAAnswer({
     required this.scenarioId,
     required this.selectedStrategy,
     required this.timestamp,
@@ -223,7 +223,7 @@ class AntiPUAResult {
   final int totalTime;
   final int masteredScenarios;
 
-  AntiPUAResult({
+  const AntiPUAResult({
     required this.category,
     required this.totalScenarios,
     required this.completedScenarios,

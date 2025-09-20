@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../anti_pua_controller.dart';
+import '../anti_pua_scenarios.dart';
 import '../../../core/models/user_model.dart';
 
 class AntiPUATrainingPage extends StatelessWidget {

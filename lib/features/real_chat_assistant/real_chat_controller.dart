@@ -7,27 +7,41 @@ import 'social_radar.dart';
 
 /// 真人聊天助手控制器
 class RealChatController extends ChangeNotifier {
-  final UserModel user;
+  final UserModel? user;
 
   String _inputText = '';
   List<ChatSuggestion> _suggestions = [];
   SocialTranslation? _translation;
   SocialRadarAnalysis? _radarAnalysis;
   bool _isAnalyzing = false;
+  bool _isScanning = false;
+  bool _isGenerating = false;
   String _analysisHistory = '';
 
-  RealChatController({required this.user});
+  // 用于页面显示的数据格式
+  Map<String, dynamic> _translationResult = {};
+  List<Map<String, dynamic>> _radarResults = [];
+  List<Map<String, dynamic>> _replySuggestions = [];
 
-  // Getters
+  RealChatController({this.user});
+
+  // Getters - 匹配页面中使用的属性名
   String get inputText => _inputText;
   List<ChatSuggestion> get suggestions => _suggestions;
   SocialTranslation? get translation => _translation;
   SocialRadarAnalysis? get radarAnalysis => _radarAnalysis;
   bool get isAnalyzing => _isAnalyzing;
+  bool get isScanning => _isScanning;
+  bool get isGenerating => _isGenerating;
   String get analysisHistory => _analysisHistory;
 
-  /// 分析对方消息
-  Future<void> analyzeMessage(String message) async {
+  // 页面使用的格式化数据
+  Map<String, dynamic> get translationResult => _translationResult;
+  List<Map<String, dynamic>> get radarResults => _radarResults;
+  List<Map<String, dynamic>> get replySuggestions => _replySuggestions;
+
+  /// 翻译消息（社交翻译功能）
+  Future<void> translateMessage(String message) async {
     if (message.trim().isEmpty) return;
 
     _isAnalyzing = true;
@@ -38,21 +52,131 @@ class RealChatController extends ChangeNotifier {
       // 社交翻译官：解读隐含意思
       _translation = await SocialTranslator.translateMessage(message);
 
-      // 社交雷达：识别关键信息
-      _radarAnalysis = await SocialRadar.analyzeMessage(message);
-
-      // 生成回复建议
-      _suggestions = await _generateReplySuggestions(message);
+      // 转换为页面显示格式
+      _translationResult = {
+        'surfaceMeaning': '字面意思：$message',
+        'hiddenMeaning': _translation!.hiddenMeaning,
+        'emotionalTone': '${_translation!.emotionalState.emoji} ${_translation!.emotionalState.displayName}',
+        'suggestedResponse': _translation!.suggestedResponse,
+      };
 
       // 更新历史记录
-      _updateAnalysisHistory(message);
+      _updateAnalysisHistory('翻译: $message');
 
     } catch (e) {
-      debugPrint('分析消息失败: $e');
+      debugPrint('翻译消息失败: $e');
+      _translationResult = {
+        'surfaceMeaning': message,
+        'hiddenMeaning': '分析失败，请重试',
+        'emotionalTone': '无法识别',
+        'suggestedResponse': '建议直接回应',
+      };
     } finally {
       _isAnalyzing = false;
       notifyListeners();
     }
+  }
+
+  /// 扫描社交信号（社交雷达功能）
+  Future<void> scanSocialSignals(String content) async {
+    if (content.trim().isEmpty) return;
+
+    _isScanning = true;
+    notifyListeners();
+
+    try {
+      // 社交雷达：识别关键信息
+      _radarAnalysis = await SocialRadar.analyzeMessage(content);
+
+      // 转换为页面显示格式
+      _radarResults = [];
+
+      // 添加机会信号
+      for (final opportunity in _radarAnalysis!.opportunities) {
+        _radarResults.add({
+          'type': 'positive',
+          'title': _getOpportunityTitle(opportunity.type),
+          'description': opportunity.explanation,
+          'intensity': _getPriorityText(opportunity.priority),
+        });
+      }
+
+      // 添加警告信号
+      for (final warning in _radarAnalysis!.warnings) {
+        _radarResults.add({
+          'type': 'negative',
+          'title': _getWarningTitle(warning.type),
+          'description': warning.explanation,
+          'intensity': _getSeverityText(warning.severity),
+        });
+      }
+
+      // 添加关键信息
+      for (final info in _radarAnalysis!.keyInformation) {
+        _radarResults.add({
+          'type': 'neutral',
+          'title': _getInfoTitle(info.type),
+          'description': '发现：${info.content}',
+          'intensity': _getImportanceText(info.importance),
+        });
+      }
+
+      // 更新历史记录
+      _updateAnalysisHistory('雷达扫描: ${content.substring(0, 20)}...');
+
+    } catch (e) {
+      debugPrint('扫描信号失败: $e');
+      _radarResults = [{
+        'type': 'neutral',
+        'title': '扫描失败',
+        'description': '无法分析内容，请检查输入',
+        'intensity': '低',
+      }];
+    } finally {
+      _isScanning = false;
+      notifyListeners();
+    }
+  }
+
+  /// 生成回复建议
+  Future<void> generateReplySuggestions(String context) async {
+    if (context.trim().isEmpty) return;
+
+    _isGenerating = true;
+    notifyListeners();
+
+    try {
+      // 生成建议
+      _suggestions = await _generateReplySuggestions(context);
+
+      // 转换为页面显示格式
+      _replySuggestions = _suggestions.map((suggestion) => {
+        'style': suggestion.type.displayName,
+        'message': suggestion.text,
+        'explanation': suggestion.explanation,
+        'confidence': suggestion.confidence,
+      }).toList();
+
+      // 更新历史记录
+      _updateAnalysisHistory('生成建议: ${context.substring(0, 20)}...');
+
+    } catch (e) {
+      debugPrint('生成建议失败: $e');
+      _replySuggestions = [{
+        'style': '通用',
+        'message': '谢谢你的分享，我很认同你的看法',
+        'explanation': '安全的通用回复',
+        'confidence': 0.5,
+      }];
+    } finally {
+      _isGenerating = false;
+      notifyListeners();
+    }
+  }
+
+  /// 分析对方消息（原有方法，保持兼容性）
+  Future<void> analyzeMessage(String message) async {
+    await translateMessage(message);
   }
 
   /// 生成回复建议
@@ -142,6 +266,8 @@ class RealChatController extends ChangeNotifier {
             explanation: opportunity.explanation,
           ));
           break;
+        default:
+          break;
       }
     }
 
@@ -173,6 +299,14 @@ class RealChatController extends ChangeNotifier {
       ));
     }
 
+    // 默认建议
+    suggestions.add(ChatSuggestion(
+      text: '我明白你的意思，让我们继续聊聊这个话题',
+      type: SuggestionType.engaging,
+      confidence: 0.5,
+      explanation: '保持对话继续的通用回复',
+    ));
+
     return suggestions;
   }
 
@@ -195,12 +329,88 @@ class RealChatController extends ChangeNotifier {
     }
   }
 
+  /// 辅助方法：获取机会标题
+  String _getOpportunityTitle(OpportunityType type) {
+    switch (type) {
+      case OpportunityType.show_care:
+        return '关心机会';
+      case OpportunityType.ask_question:
+        return '提问机会';
+      case OpportunityType.share_experience:
+        return '分享机会';
+      case OpportunityType.emotional_support:
+        return '情感支持机会';
+      case OpportunityType.future_plan:
+        return '未来计划机会';
+    }
+  }
+
+  String _getWarningTitle(WarningType type) {
+    switch (type) {
+      case WarningType.cold_response:
+        return '冷淡回应';
+      case WarningType.impatient:
+        return '不耐烦信号';
+      case WarningType.keeping_distance:
+        return '保持距离';
+    }
+  }
+
+  String _getInfoTitle(InfoType type) {
+    switch (type) {
+      case InfoType.time:
+        return '时间信息';
+      case InfoType.location:
+        return '地点信息';
+      case InfoType.people:
+        return '人物信息';
+      case InfoType.activity:
+        return '活动信息';
+    }
+  }
+
+  String _getPriorityText(OpportunityPriority priority) {
+    switch (priority) {
+      case OpportunityPriority.high:
+        return '高';
+      case OpportunityPriority.medium:
+        return '中';
+      case OpportunityPriority.low:
+        return '低';
+    }
+  }
+
+  String _getSeverityText(WarningSeverity severity) {
+    switch (severity) {
+      case WarningSeverity.high:
+        return '高风险';
+      case WarningSeverity.medium:
+        return '中风险';
+      case WarningSeverity.low:
+        return '低风险';
+    }
+  }
+
+  String _getImportanceText(ImportanceLevel importance) {
+    switch (importance) {
+      case ImportanceLevel.high:
+        return '重要';
+      case ImportanceLevel.medium:
+        return '一般';
+      case ImportanceLevel.low:
+        return '次要';
+    }
+  }
+
   /// 清空输入和结果
   void clearInput() {
     _inputText = '';
     _suggestions.clear();
     _translation = null;
     _radarAnalysis = null;
+    _translationResult.clear();
+    _radarResults.clear();
+    _replySuggestions.clear();
     notifyListeners();
   }
 

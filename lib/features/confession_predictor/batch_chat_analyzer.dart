@@ -96,7 +96,6 @@ class BatchChatAnalyzer {
   static InitiativeAnalysis _analyzeInitiative(List<ProcessedMessage> messages) {
     int conversationStarts = 0;
     int userStarts = 0;
-    int longGaps = 0; // 长时间间隔
 
     // 简化分析：查看谁更多发起话题
     for (int i = 0; i < messages.length - 1; i++) {
@@ -178,7 +177,7 @@ class BatchChatAnalyzer {
   /// 分析时间模式
   static TimePattern _analyzeTimePattern(List<ProcessedMessage> messages) {
     // 这里简化处理，实际需要真实的时间戳数据
-    return TimePattern(
+    return const TimePattern(
       totalDuration: Duration(hours: 1), // 假设数据
       averageGapBetweenMessages: Duration(minutes: 5),
       longestGap: Duration(hours: 2),
@@ -316,7 +315,7 @@ class BatchChatAnalyzer {
   }
 
   static double _calculatePersonalTopicRatio(Map<String, int> topics) {
-    final personalTopics = topics['生活'] ?? 0 + topics['感情'] ?? 0;
+    final personalTopics = (topics['生活'] ?? 0) + (topics['感情'] ?? 0);
     final totalTopics = topics.values.fold(0, (sum, count) => sum + count);
     return totalTopics > 0 ? personalTopics / totalTopics : 0;
   }
