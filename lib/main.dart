@@ -1,10 +1,12 @@
-// lib/main.dart (修复版 - 添加路由和认证系统)
+// lib/main.dart (完整修复版)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/utils/theme_manager.dart';
 import 'shared/services/storage_service.dart';
 import 'features/auth/auth_controller.dart';
+import 'features/home/home_controller.dart';
+import 'features/home/pages/home_page.dart';  // 关键导入：解决HomePage类找不到的问题
 import 'routes/app_routes.dart';
 import 'core/models/user_model.dart';
 
@@ -58,8 +60,11 @@ class _ChatSkillTrainerAppState extends State<ChatSkillTrainerApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _authController,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _authController),
+        ChangeNotifierProvider(create: (_) => HomeController()),
+      ],
       child: MaterialApp(
         title: '聊天技能训练师',
         debugShowCheckedModeBanner: false,
@@ -70,8 +75,14 @@ class _ChatSkillTrainerAppState extends State<ChatSkillTrainerApp> {
         onGenerateRoute: AppRoutes.onGenerateRoute,
         home: Consumer<AuthController>(
           builder: (context, auth, child) {
+            // 登录后显示主页，未登录显示欢迎页
             if (auth.isLoggedIn && auth.currentUser != null) {
-              return WelcomePage(currentUser: auth.currentUser!);
+              // 更新主页控制器的用户信息
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final homeController = Provider.of<HomeController>(context, listen: false);
+                homeController.updateUser(auth.currentUser!);
+              });
+              return const HomePage();
             } else {
               return const WelcomePage();
             }
@@ -83,9 +94,7 @@ class _ChatSkillTrainerAppState extends State<ChatSkillTrainerApp> {
 }
 
 class WelcomePage extends StatelessWidget {
-  final UserModel? currentUser;
-
-  const WelcomePage({Key? key, this.currentUser}) : super(key: key);
+  const WelcomePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -93,13 +102,6 @@ class WelcomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('聊天技能训练师'),
         centerTitle: true,
-        actions: [
-          if (currentUser != null)
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () => Navigator.pushNamed(context, '/settings'),
-            ),
-        ],
       ),
       body: Center(
         child: Padding(
@@ -111,7 +113,7 @@ class WelcomePage extends StatelessWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1), // 修复过时的API
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -134,57 +136,23 @@ class WelcomePage extends StatelessWidget {
               ),
               const SizedBox(height: 48),
 
-              // 根据登录状态显示不同按钮
-              if (currentUser != null) ...[
-                Text(
-                  '欢迎回来，${currentUser!.username}！',
-                  style: Theme.of(context).textTheme.titleLarge,
+              // 登录按钮
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pushNamed(context, '/login'),
+                  child: const Text('开始体验'),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '剩余对话次数：${currentUser!.credits}',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pushNamed(
-                      context,
-                      '/character_selection',
-                      arguments: {'user': currentUser},
-                    ),
-                    child: const Text('开始聊天'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton(
-                  onPressed: () => _logout(context),
-                  child: const Text('退出登录'),
-                ),
-              ] else ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pushNamed(context, '/login'),
-                    child: const Text('开始体验'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  '体验账号：demo / 123456',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '体验账号：demo / 123456',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  void _logout(BuildContext context) {
-    final authController = Provider.of<AuthController>(context, listen: false);
-    authController.logout();
   }
 }

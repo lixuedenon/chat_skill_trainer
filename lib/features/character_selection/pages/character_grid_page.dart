@@ -56,9 +56,9 @@ class CharacterGridPage extends StatelessWidget {
   }
 
   void _startChat(BuildContext context, character) {
-    // 导航到聊天页面的逻辑
+    // 修复：使用正确的路由路径
     Navigator.of(context).pushNamed(
-      '/chat',
+      '/basic_chat',  // ✅ 修正为正确的路由路径
       arguments: {
         'character': character,
         'user': currentUser,

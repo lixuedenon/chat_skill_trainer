@@ -38,7 +38,6 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> get routes {
     return {
-      home: (context) => const HomePage(),
       login: (context) => const LoginPage(),
       settings: (context) => const SettingsPage(),
       companionSelection: (context) => const CompanionSelectionPage(),
@@ -50,6 +49,11 @@ class AppRoutes {
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case home:
+        return MaterialPageRoute(
+          builder: (context) => const HomePage(),
+        );
+
       case characterSelection:
         final args = settings.arguments as Map<String, dynamic>?;
         final user = args?['user'] as UserModel?;

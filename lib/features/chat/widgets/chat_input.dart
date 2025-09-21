@@ -1,9 +1,6 @@
-// 2. 修复 chat_input.dart 中的错误
-
-// lib/features/chat/widgets/chat_input.dart (修复版)
+// lib/features/chat/widgets/chat_input.dart (修复焦点问题)
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class ChatInput extends StatefulWidget {
   final Function(String) onSendMessage;
@@ -32,6 +29,12 @@ class _ChatInputState extends State<ChatInput> {
   void initState() {
     super.initState();
     _textController.addListener(_onTextChanged);
+    // 延迟聚焦，确保页面完全加载
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
+    });
   }
 
   @override
@@ -62,9 +65,16 @@ class _ChatInputState extends State<ChatInput> {
     try {
       await widget.onSendMessage(message);
       _textController.clear();
-      _focusNode.requestFocus();
+
+      // 关键修复：强制重新聚焦，增加延迟确保消息发送完成
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (mounted && widget.enabled && _focusNode.canRequestFocus) {
+          _focusNode.requestFocus();
+        }
+      });
     } catch (e) {
       // 错误处理在父组件中进行
+      rethrow;
     } finally {
       if (mounted) {
         setState(() {
@@ -88,7 +98,7 @@ class _ChatInputState extends State<ChatInput> {
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Navigator.of(context).pushNamed('/billing');
+              // 可以添加充值页面导航
             },
             child: const Text('去充值'),
           ),

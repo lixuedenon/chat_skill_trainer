@@ -1,9 +1,10 @@
-// lib/features/home/pages/home_page.dart
+// lib/features/home/pages/home_page.dart (修复版)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../home_controller.dart';
 import '../../../core/models/user_model.dart';
+import '../../auth/auth_controller.dart';  // 添加这个导入
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -23,60 +24,61 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => HomeController(),
-      child: Consumer<HomeController>(
-        builder: (context, controller, child) {
-          if (controller.isLoading) {
-            return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
-            );
-          }
-
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('聊天技能训练师'),
-              centerTitle: true,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.settings),
-                  onPressed: () => Navigator.pushNamed(context, '/settings'),
-                ),
-              ],
-            ),
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 用户信息卡片
-                  _buildUserInfoCard(controller.currentUser),
-                  const SizedBox(height: 20),
-
-                  // 核心训练模块
-                  _buildSectionTitle('核心训练模块'),
-                  const SizedBox(height: 12),
-                  _buildCoreModules(controller),
-                  const SizedBox(height: 20),
-
-                  // 智能辅助工具
-                  _buildSectionTitle('智能辅助工具'),
-                  const SizedBox(height: 12),
-                  _buildAssistantModules(controller),
-                  const SizedBox(height: 20),
-
-                  // 成长追踪
-                  _buildSectionTitle('成长追踪'),
-                  const SizedBox(height: 12),
-                  _buildGrowthTracker(controller.currentUser),
-                ],
-              ),
+    return Consumer<HomeController>(
+      builder: (context, controller, child) {
+        if (controller.isLoading) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
             ),
           );
-        },
-      ),
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('聊天技能训练师'),
+            centerTitle: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () => Navigator.pushNamed(context, '/settings'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout),
+                onPressed: () => _logout(context),
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 用户信息卡片
+                _buildUserInfoCard(controller.currentUser),
+                const SizedBox(height: 20),
+
+                // 核心训练模块
+                _buildSectionTitle('核心训练模块'),
+                const SizedBox(height: 12),
+                _buildCoreModules(controller),
+                const SizedBox(height: 20),
+
+                // 智能辅助工具
+                _buildSectionTitle('智能辅助工具'),
+                const SizedBox(height: 12),
+                _buildAssistantModules(controller),
+                const SizedBox(height: 20),
+
+                // 成长追踪
+                _buildSectionTitle('成长追踪'),
+                const SizedBox(height: 12),
+                _buildGrowthTracker(controller.currentUser),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -87,12 +89,9 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              const Text('欢迎使用聊天技能训练师'),
+              const Text('正在加载用户信息...'),
               const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () => Navigator.pushNamed(context, '/login'),
-                child: const Text('登录开始训练'),
-              ),
+              const CircularProgressIndicator(),
             ],
           ),
         ),
@@ -208,7 +207,7 @@ class _HomePageState extends State<HomePage> {
       child: InkWell(
         onTap: module.isUnlocked
           ? () => _onModuleTap(module, controller)
-          : null,
+          : () => _showUnlockDialog(module),
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -224,22 +223,28 @@ class _HomePageState extends State<HomePage> {
                 module.name,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: module.isUnlocked ? null : Colors.grey,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
               Text(
                 module.description,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: module.isUnlocked ? null : Colors.grey,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               if (!module.isUnlocked)
-                const Icon(
-                  Icons.lock,
-                  color: Colors.grey,
-                  size: 16,
+                const Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: Icon(
+                    Icons.lock,
+                    color: Colors.grey,
+                    size: 16,
+                  ),
                 ),
             ],
           ),
@@ -352,12 +357,69 @@ class _HomePageState extends State<HomePage> {
         Navigator.pushNamed(context, '/confession_analysis');
         break;
       case 'real_chat_assistant':
-        Navigator.pushNamed(context, '/real_chat_assistant');
+        Navigator.pushNamed(
+          context,
+          '/real_chat_assistant',
+          arguments: {'user': controller.currentUser},
+        );
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${module.name} 功能开发中...')),
         );
     }
+  }
+
+  void _showUnlockDialog(TrainingModule module) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${module.name} 暂未解锁'),
+        content: Text(_getUnlockCondition(module)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getUnlockCondition(TrainingModule module) {
+    switch (module.id) {
+      case 'ai_companion':
+        return '需要50个Credits才能解锁此功能';
+      case 'real_chat_assistant':
+        return '需要VIP会员才能使用此功能';
+      case 'confession_predictor':
+        return '需要完成至少5次对话才能解锁';
+      default:
+        return '暂未满足解锁条件';
+    }
+  }
+
+  void _logout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认退出'),
+        content: const Text('确定要退出登录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              final authController = Provider.of<AuthController>(context, listen: false);
+              authController.logout();
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 }

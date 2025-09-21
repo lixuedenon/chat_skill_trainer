@@ -1,4 +1,4 @@
-// lib/features/chat/pages/chat_page.dart (修复溢出问题的完整版)
+// lib/features/chat/pages/basic_chat_page.dart (修复停止聊天跳转)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -155,7 +155,6 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     );
   }
 
-  /// 构建状态栏（好感度和轮数）- 修复溢出问题
   Widget _buildStatusBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -172,7 +171,6 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         builder: (context, controller, child) {
           return Column(
             children: [
-              // 第一行：好感度显示
               Row(
                 children: [
                   Expanded(
@@ -185,7 +183,6 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 ],
               ),
               const SizedBox(height: 8),
-              // 第二行：轮数计数器
               Row(
                 children: [
                   Expanded(
@@ -412,12 +409,33 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     }
   }
 
+  // 修复：停止聊天后跳转到分析页面
   Future<void> _endConversation() async {
     try {
+      // 显示加载对话框
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('正在生成分析报告...'),
+            ],
+          ),
+        ),
+      );
+
       await _chatController.endConversation();
+
       if (mounted) {
+        // 关闭加载对话框
+        Navigator.of(context).pop();
+
+        // 修复：使用正确的路由名称和参数
         Navigator.of(context).pushReplacementNamed(
-          '/analysis',
+          '/analysisDetail',
           arguments: {
             'conversation': _chatController.currentConversation,
             'character': widget.character,
@@ -427,6 +445,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       }
     } catch (e) {
       if (mounted) {
+        // 关闭加载对话框
+        Navigator.of(context).pop();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('结束对话失败: ${e.toString()}'),
