@@ -1,10 +1,10 @@
-// lib/routes/app_routes.dart (修复版)
+// lib/routes/app_routes.dart (完整修复版)
 
 import 'package:flutter/material.dart';
 import '../features/home/pages/home_page.dart';
 import '../features/auth/pages/login_page.dart';
 import '../features/character_selection/pages/character_grid_page.dart';
-import '../features/chat/pages/basic_chat_page.dart'; // 这个文件中的类名是 ChatPage
+import '../features/chat/pages/basic_chat_page.dart';
 import '../features/ai_companion/pages/companion_selection_page.dart';
 import '../features/ai_companion/pages/companion_chat_page.dart';
 import '../features/combat_training/pages/combat_menu_page.dart';
@@ -40,10 +40,9 @@ class AppRoutes {
     return {
       login: (context) => const LoginPage(),
       settings: (context) => const SettingsPage(),
-      companionSelection: (context) => const CompanionSelectionPage(),
-      combatMenu: (context) => const CombatMenuPage(),
       batchUpload: (context) => const BatchUploadPage(),
       antiPuaTraining: (context) => const AntiPUATrainingPage(),
+      combatMenu: (context) => const CombatMenuPage(),
     };
   }
 
@@ -75,6 +74,13 @@ class AppRoutes {
         }
         return _errorRoute('缺少角色或用户信息');
 
+      // 修复：AI伴侣选择页面路由（不传递user参数）
+      case companionSelection:
+        return MaterialPageRoute(
+          builder: (context) => const CompanionSelectionPage(),
+        );
+
+      // 修复：AI伴侣聊天页面路由（不传递user参数）
       case companionChat:
         final args = settings.arguments as Map<String, dynamic>?;
         if (args != null && args['companion'] != null) {

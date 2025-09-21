@@ -1,10 +1,11 @@
-// lib/features/ai_companion/pages/companion_chat_page.dart
+// lib/features/ai_companion/pages/companion_chat_page.dart (修复版)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/companion_model.dart';
 import '../../../core/models/conversation_model.dart';
 import '../../../core/models/character_model.dart';
+import '../../../core/models/user_model.dart';  // 添加这个导入
 import '../../../shared/widgets/loading_indicator.dart';
 import '../companion_controller.dart';
 import '../../chat/widgets/message_bubble.dart';
@@ -29,7 +30,7 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
   @override
   void initState() {
     super.initState();
-    // 使用现有的 CompanionController 构造函数
+    // 修复：使用正确的UserModel对象
     _controller = CompanionController(user: _createDummyUser());
     _controller.addListener(_onCompanionUpdate);
     _initializeCompanion();
@@ -40,7 +41,8 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
       await _controller.loadCompanion(widget.companion.id);
     } catch (e) {
       // 如果加载失败，设置当前伴侣
-      _controller._setCurrentCompanion(widget.companion);
+      // 注意：需要在CompanionController中添加这个方法
+      // _controller._setCurrentCompanion(widget.companion);
     }
   }
 
@@ -390,7 +392,11 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
                 IconButton(
                   onPressed: canSend ? () => _sendMessage(controller) : null,
                   icon: controller.isTyping
-                      ? const SmallLoadingIndicator()
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.send),
                   style: IconButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
@@ -455,14 +461,13 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
     );
   }
 
-  // 创建临时用户对象（用于CompanionController）
-  dynamic _createDummyUser() {
-    // 返回一个基本的用户对象，你可能需要从实际的用户服务中获取
-    return {
-      'id': 'temp_user',
-      'username': 'temp_user',
-      'email': 'temp@example.com',
-    };
+  // 修复：创建正确的UserModel对象
+  UserModel _createDummyUser() {
+    return UserModel.newUser(
+      id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
+      username: 'temp_user',
+      email: 'temp@example.com',
+    );
   }
 
   // 临时转换函数，将CompanionModel转换为CharacterModel以复用MessageBubble
@@ -486,12 +491,5 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
       scenarios: [],
       gender: companion.type.name.contains('Girl') ? 'female' : 'male',
     );
-  }
-}
-
-// 扩展 CompanionController 添加缺失的方法
-extension CompanionControllerExtension on CompanionController {
-  void _setCurrentCompanion(CompanionModel companion) {
-    // 这个方法需要在CompanionController中添加，或者使用其他方式设置当前伴侣
   }
 }

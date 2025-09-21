@@ -409,7 +409,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     }
   }
 
-  // 修复：停止聊天后跳转到分析页面
+  // 最终修复：使用正确的路由名称
   Future<void> _endConversation() async {
     try {
       // 显示加载对话框
@@ -433,9 +433,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         // 关闭加载对话框
         Navigator.of(context).pop();
 
-        // 修复：使用正确的路由名称和参数
+        // 修复：使用app_routes.dart中正确配置的路由名称
         Navigator.of(context).pushReplacementNamed(
-          '/analysisDetail',
+          '/analysis_detail',  // 注意：这里是下划线，不是驼峰
           arguments: {
             'conversation': _chatController.currentConversation,
             'character': widget.character,

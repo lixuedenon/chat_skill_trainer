@@ -1,4 +1,4 @@
-// lib/features/ai_companion/pages/companion_selection_page.dart
+// lib/features/ai_companion/pages/companion_selection_page.dart (修复版)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,12 +9,7 @@ import '../companion_controller.dart';
 import '../companion_story_generator.dart';
 
 class CompanionSelectionPage extends StatefulWidget {
-  final UserModel? currentUser;
-
-  const CompanionSelectionPage({
-    Key? key,
-    this.currentUser,
-  }) : super(key: key);
+  const CompanionSelectionPage({Key? key}) : super(key: key);
 
   @override
   State<CompanionSelectionPage> createState() => _CompanionSelectionPageState();
@@ -28,9 +23,8 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
   @override
   void initState() {
     super.initState();
-    // 创建一个临时用户，如果没有提供currentUser
-    final user = widget.currentUser ?? _createDummyUser();
-    _controller = CompanionController(user: user);
+    // 修复：创建正确的UserModel对象
+    _controller = CompanionController(user: _createDummyUser());
     _loadExistingCompanions();
   }
 
@@ -296,7 +290,11 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
         child: _isCreating
-            ? const SmallLoadingIndicator()
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
             : const Text('创建伴侣 (开启神秘相遇)'),
       ),
     );
@@ -391,7 +389,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
         meetingStory: meetingStory,
       );
 
-      // 修复：使用正确的方法调用方式
+      // 修复：检查CompanionController的createCompanion方法签名
       await _controller.createCompanion(companion: companion);
 
       if (mounted) {
@@ -506,7 +504,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
     );
   }
 
-  /// 创建临时用户对象
+  /// 修复：创建正确的UserModel对象
   UserModel _createDummyUser() {
     return UserModel.newUser(
       id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
