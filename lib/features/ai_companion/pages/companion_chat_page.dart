@@ -1,11 +1,11 @@
-// lib/features/ai_companion/pages/companion_chat_page.dart (修复版)
+// lib/features/ai_companion/pages/companion_chat_page.dart (完整调试版)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/companion_model.dart';
 import '../../../core/models/conversation_model.dart';
 import '../../../core/models/character_model.dart';
-import '../../../core/models/user_model.dart';  // 添加这个导入
+import '../../../core/models/user_model.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../companion_controller.dart';
 import '../../chat/widgets/message_bubble.dart';
@@ -23,39 +23,94 @@ class CompanionChatPage extends StatefulWidget {
 }
 
 class _CompanionChatPageState extends State<CompanionChatPage> {
-  late CompanionController _controller;
+  CompanionController? _controller;
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // 修复：使用正确的UserModel对象
-    _controller = CompanionController(user: _createDummyUser());
-    _controller.addListener(_onCompanionUpdate);
-    _initializeCompanion();
+    print('🟢 [ChatPage] initState 开始');
+    print('🟢 [ChatPage] 传入的companion: ${widget.companion}');
+    print('🟢 [ChatPage] companion ID: ${widget.companion.id}');
+
+    // 延迟整个初始化过程到frame完成后
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('🟢 [ChatPage] PostFrameCallback 执行');
+      if (mounted) {
+        _initializeController();
+      } else {
+        print('🔴 [ChatPage] Widget已经被销毁，跳过初始化');
+      }
+    });
+  }
+
+  void _initializeController() async {
+    print('🟢 [ChatPage] _initializeController 开始');
+    try {
+      print('🟢 [ChatPage] 开始创建CompanionController');
+      _controller = CompanionController(user: _createDummyUser());
+      print('🟢 [ChatPage] CompanionController 创建成功');
+
+      _controller!.addListener(_onCompanionUpdate);
+      print('🟢 [ChatPage] 监听器添加成功');
+
+      setState(() {
+        _isInitialized = true;
+      });
+      print('🟢 [ChatPage] 设置_isInitialized = true');
+
+      _initializeCompanion();
+      print('🟢 [ChatPage] Controller初始化完成');
+    } catch (e) {
+      print('🔴 [ChatPage] Controller初始化错误: $e');
+      print('🔴 [ChatPage] 错误堆栈: ${StackTrace.current}');
+    }
   }
 
   void _initializeCompanion() async {
+    if (_controller == null) {
+      print('🔴 [ChatPage] _initializeCompanion: Controller为null');
+      return;
+    }
+
+    print('🟢 [ChatPage] _initializeCompanion 开始');
     try {
-      await _controller.loadCompanion(widget.companion.id);
+      print('🟢 [ChatPage] 调用 _controller.loadCompanion');
+      await _controller!.loadCompanion(widget.companion.id);
+      print('🟢 [ChatPage] loadCompanion 成功');
     } catch (e) {
-      // 如果加载失败，设置当前伴侣
-      // 注意：需要在CompanionController中添加这个方法
-      // _controller._setCurrentCompanion(widget.companion);
+      print('🔴 [ChatPage] loadCompanion 失败: $e');
+      print('🟢 [ChatPage] 尝试初始化伴侣');
+      try {
+        await _controller!.initializeCompanion(widget.companion);
+        print('🟢 [ChatPage] initializeCompanion 成功');
+      } catch (e2) {
+        print('🔴 [ChatPage] initializeCompanion 也失败: $e2');
+      }
     }
   }
 
   void _onCompanionUpdate() {
-    if (_controller.messages.isNotEmpty) {
+    if (!mounted || _controller == null) {
+      print('🔴 [ChatPage] _onCompanionUpdate: Widget已销毁或Controller为null');
+      return;
+    }
+
+    print('🟢 [ChatPage] _onCompanionUpdate 触发 - messages数量: ${_controller!.messages.length}');
+    if (_controller!.messages.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
+        if (mounted) {
+          _scrollToBottom();
+        }
       });
     }
   }
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
+      print('🟢 [ChatPage] 滚动到底部');
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
@@ -66,43 +121,94 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
 
   @override
   void dispose() {
-    _controller.removeListener(_onCompanionUpdate);
-    _controller.dispose();
+    print('🟢 [ChatPage] dispose 开始');
+    if (_controller != null) {
+      _controller!.removeListener(_onCompanionUpdate);
+      _controller!.dispose();
+      print('🟢 [ChatPage] Controller disposed');
+    }
     _scrollController.dispose();
     _textController.dispose();
+    print('🟢 [ChatPage] dispose 完成');
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _controller,
-      child: Scaffold(
-        appBar: _buildAppBar(),
-        body: Column(
-          children: [
-            _buildStatusBar(),
-            Expanded(child: _buildMessagesList()),
-            _buildInputArea(),
-          ],
+    print('🟢 [ChatPage] build 开始 - 初始化状态: $_isInitialized');
+
+    // 如果未初始化，显示加载界面
+    if (!_isInitialized || _controller == null) {
+      print('🟢 [ChatPage] 显示加载界面');
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.companion.name),
         ),
-      ),
-    );
+        body: const Center(
+          child: LoadingIndicator(message: '正在初始化...'),
+        ),
+      );
+    }
+
+    print('🟢 [ChatPage] 构建主界面');
+    try {
+      return ChangeNotifierProvider.value(
+        value: _controller!,
+        child: Scaffold(
+          appBar: _buildAppBar(),
+          body: Column(
+            children: [
+              _buildStatusBar(),
+              Expanded(child: _buildMessagesList()),
+              _buildInputArea(),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      print('🔴 [ChatPage] build 方法错误: $e');
+      return Scaffold(
+        appBar: AppBar(title: const Text('错误')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('页面构建错误: $e'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  print('🟢 [ChatPage] 用户点击返回按钮');
+                  Navigator.of(context).pop();
+                },
+                child: const Text('返回'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   PreferredSizeWidget _buildAppBar() {
+    print('🟢 [ChatPage] _buildAppBar');
     return AppBar(
       title: Row(
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundImage: widget.companion.avatar.isNotEmpty
-                ? AssetImage(widget.companion.avatar)
-                : null,
-            backgroundColor: Colors.grey[300],
-            child: widget.companion.avatar.isEmpty
-                ? const Icon(Icons.person, color: Colors.white)
-                : null,
+            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.7),
+            child: Text(
+              widget.companion.name.isNotEmpty
+                  ? widget.companion.name[0].toUpperCase()
+                  : 'A',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -116,380 +222,3 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  widget.companion.typeName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        Consumer<CompanionController>(
-          builder: (context, controller, child) {
-            return IconButton(
-              icon: const Icon(Icons.info_outline),
-              onPressed: () => _showCompanionInfo(controller.currentCompanion ?? widget.companion),
-              tooltip: '伴侣信息',
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: Consumer<CompanionController>(
-        builder: (context, controller, child) {
-          final companion = controller.currentCompanion ?? widget.companion;
-
-          return Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatusItem(
-                      '关系阶段',
-                      companion.stageName,
-                      Icons.favorite,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildStatusItem(
-                      'Token使用',
-                      '${companion.tokenUsed}/${companion.maxToken}',
-                      Icons.memory,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (companion.isNearTokenLimit)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange[200]!),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber,
-                           color: Colors.orange[700], size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Token即将用完，即将触发离别剧情',
-                          style: TextStyle(
-                            color: Colors.orange[700],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildStatusItem(String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Theme.of(context).primaryColor),
-        const SizedBox(width: 4),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMessagesList() {
-    return Consumer<CompanionController>(
-      builder: (context, controller, child) {
-        if (controller.isTyping && controller.messages.isEmpty) {
-          return const LoadingIndicator(message: '正在加载记忆...');
-        }
-
-        if (controller.messages.isEmpty) {
-          return _buildEmptyState();
-        }
-
-        return ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          itemCount: controller.messages.length + (controller.isTyping ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == controller.messages.length && controller.isTyping) {
-              return _buildTypingIndicator();
-            }
-
-            final message = controller.messages[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: MessageBubble(
-                message: message,
-                character: _createCharacterFromCompanion(widget.companion),
-                showAvatar: !message.isUser,
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundImage: widget.companion.avatar.isNotEmpty
-                ? AssetImage(widget.companion.avatar)
-                : null,
-            backgroundColor: Colors.grey[200],
-            child: widget.companion.avatar.isEmpty
-                ? const Icon(Icons.person, size: 40, color: Colors.grey)
-                : null,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '开始和${widget.companion.name}的故事',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              widget.companion.meetingStory.storyText,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypingIndicator() {
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 16,
-          backgroundImage: widget.companion.avatar.isNotEmpty
-              ? AssetImage(widget.companion.avatar)
-              : null,
-          backgroundColor: Colors.grey[200],
-          child: widget.companion.avatar.isEmpty
-              ? const Icon(Icons.person, size: 16)
-              : null,
-        ),
-        const SizedBox(width: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '正在思考...',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInputArea() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: Consumer<CompanionController>(
-        builder: (context, controller, child) {
-          final canSend = !controller.isTyping;
-
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    decoration: const InputDecoration(
-                      hintText: '输入消息...',  // 修复：移除个性化提示文字
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(24)),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                    ),
-                    maxLines: null,
-                    onSubmitted: (_) => _sendMessage(controller),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: canSend ? () => _sendMessage(controller) : null,
-                  icon: controller.isTyping
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _sendMessage(CompanionController controller) async {
-    final message = _textController.text.trim();
-    if (message.isEmpty) return;
-
-    _textController.clear();
-
-    try {
-      await controller.sendMessage(message);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('发送失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _showCompanionInfo(CompanionModel companion) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(companion.name),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('类型: ${companion.typeName}'),
-            const SizedBox(height: 8),
-            Text('关系阶段: ${companion.stageName}'),
-            const SizedBox(height: 8),
-            Text('相处天数: ${companion.relationshipDays}天'),
-            const SizedBox(height: 8),
-            Text('记忆片段: ${companion.memories.length}个'),
-            const SizedBox(height: 8),
-            Text('Token使用: ${companion.tokenUsed}/${companion.maxToken}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 修复：创建正确的UserModel对象
-  UserModel _createDummyUser() {
-    return UserModel.newUser(
-      id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
-      username: 'temp_user',
-      email: 'temp@example.com',
-    );
-  }
-
-  // 临时转换函数，将CompanionModel转换为CharacterModel以复用MessageBubble
-  CharacterModel _createCharacterFromCompanion(CompanionModel companion) {
-    return CharacterModel(
-      id: companion.id,
-      name: companion.name,
-      description: companion.typeName,
-      avatar: companion.avatar,
-      type: CharacterType.gentle, // 默认类型
-      traits: const PersonalityTraits(
-        independence: 50,
-        strength: 50,
-        rationality: 50,
-        maturity: 50,
-        warmth: 50,
-        playfulness: 50,
-        elegance: 50,
-        mystery: 50,
-      ),
-      scenarios: [],
-      gender: companion.type.name.contains('Girl') ? 'female' : 'male',
-    );
-  }
-}

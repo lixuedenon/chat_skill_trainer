@@ -1,6 +1,7 @@
-// lib/features/ai_companion/companion_controller.dart
+// lib/features/ai_companion/companion_controller.dart (完整修复版)
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../../core/models/companion_model.dart';
 import '../../core/models/conversation_model.dart';
 import '../../core/models/user_model.dart';
@@ -8,7 +9,6 @@ import '../../shared/services/storage_service.dart';
 import '../ai_companion/companion_memory_service.dart';
 import '../ai_companion/companion_story_generator.dart';
 
-/// AI伴侣养成控制器
 class CompanionController extends ChangeNotifier {
   final UserModel user;
   CompanionModel? _currentCompanion;
@@ -33,10 +33,11 @@ class CompanionController extends ChangeNotifier {
   bool get shouldTriggerEnding => _currentCompanion?.shouldTriggerEnding ?? false;
   bool get canSendMessage => !_isTyping && _currentCompanion != null;
 
-  /// 加载现有伴侣列表
   Future<void> loadExistingCompanions() async {
     _isLoading = true;
+    print('🟡 即将调用notifyListeners - loadExistingCompanions方法开始');
     notifyListeners();
+    print('🟢 notifyListeners调用完成 - loadExistingCompanions方法开始');
 
     try {
       _existingCompanions = await StorageService.getCompanions();
@@ -44,21 +45,21 @@ class CompanionController extends ChangeNotifier {
       _statusMessage = '加载伴侣列表失败: ${e.toString()}';
     } finally {
       _isLoading = false;
+      print('🟡 即将调用notifyListeners - loadExistingCompanions方法结束');
       notifyListeners();
+      print('🟢 notifyListeners调用完成 - loadExistingCompanions方法结束');
     }
   }
 
-  /// 初始化伴侣对话
   Future<void> initializeCompanion(CompanionModel companion) async {
     _isLoading = true;
     _currentCompanion = companion;
+    print('🟡 即将调用notifyListeners - initializeCompanion方法开始');
     notifyListeners();
+    print('🟢 notifyListeners调用完成 - initializeCompanion方法开始');
 
     try {
-      // 加载历史消息
       _messages = await CompanionMemoryService.loadMessages(companion.id);
-
-      // 如果是第一次对话，发送开场消息
       if (_messages.isEmpty) {
         await _addOpeningMessage();
       }
@@ -66,11 +67,12 @@ class CompanionController extends ChangeNotifier {
       _statusMessage = '初始化失败: ${e.toString()}';
     } finally {
       _isLoading = false;
+      print('🟡 即将调用notifyListeners - initializeCompanion方法结束');
       notifyListeners();
+      print('🟢 notifyListeners调用完成 - initializeCompanion方法结束');
     }
   }
 
-  /// 创建新的AI伴侣（统一方法）
   Future<void> createCompanion({
     String? name,
     CompanionType? type,
@@ -80,10 +82,8 @@ class CompanionController extends ChangeNotifier {
       CompanionModel newCompanion;
 
       if (companion != null) {
-        // 直接使用提供的伴侣对象
         newCompanion = companion;
       } else if (name != null && type != null) {
-        // 根据参数创建新伴侣
         final meetingStory = CompanionStoryGenerator.generateRandomMeeting(type);
         newCompanion = CompanionModel.create(
           name: name,
@@ -95,26 +95,22 @@ class CompanionController extends ChangeNotifier {
         throw Exception('必须提供伴侣对象或名称和类型');
       }
 
-      // 保存到存储
       await StorageService.saveCompanion(newCompanion);
-
-      // 更新列表
       _existingCompanions.insert(0, newCompanion);
-
-      // 设置为当前伴侣
       _currentCompanion = newCompanion;
       _messages = [];
-
-      // 添加开场消息
       await _addOpeningMessage();
 
-      notifyListeners();
+      print('🟡 即将调用notifyListeners - createCompanion方法（延迟）');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+        print('🟢 notifyListeners调用完成 - createCompanion方法（延迟）');
+      });
     } catch (e) {
       throw Exception('创建伴侣失败: ${e.toString()}');
     }
   }
 
-  /// 加载已有的AI伴侣
   Future<void> loadCompanion(String companionId) async {
     try {
       final companionData = await StorageService.getCompanion(companionId);
@@ -125,21 +121,25 @@ class CompanionController extends ChangeNotifier {
       _currentCompanion = companionData;
       _messages = await CompanionMemoryService.loadMessages(companionId);
 
-      notifyListeners();
+      print('🟡 即将调用notifyListeners - loadCompanion方法（延迟）');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+        print('🟢 notifyListeners调用完成 - loadCompanion方法（延迟）');
+      });
     } catch (e) {
       throw Exception('加载伴侣失败: $e');
     }
   }
 
-  /// 发送消息
   Future<void> sendMessage(String content) async {
     if (_currentCompanion == null || _isTyping) return;
 
     try {
       _isTyping = true;
+      print('🟡 即将调用notifyListeners - sendMessage方法开始');
       notifyListeners();
+      print('🟢 notifyListeners调用完成 - sendMessage方法开始');
 
-      // 创建用户消息
       final userMessage = MessageModel(
         id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
         content: content,
@@ -151,37 +151,32 @@ class CompanionController extends ChangeNotifier {
 
       _messages.add(userMessage);
 
-      // 更新token使用量
       final tokenUsed = _calculateTokenUsage(content);
       _currentCompanion = _currentCompanion!.updateTokenUsage(
         _currentCompanion!.tokenUsed + tokenUsed,
       );
 
-      // 检查是否需要触发结局
       if (_currentCompanion!.shouldTriggerEnding && !_showEndingSequence) {
         await _triggerEndingSequence();
       } else {
-        // 生成AI回复
         final aiResponse = await _generateAIResponse(content);
         _messages.add(aiResponse);
       }
 
-      // 保存状态
       await _saveState();
 
     } catch (e) {
       _statusMessage = '发送消息失败: $e';
     } finally {
       _isTyping = false;
+      print('🟡 即将调用notifyListeners - sendMessage方法结束');
       notifyListeners();
+      print('🟢 notifyListeners调用完成 - sendMessage方法结束');
     }
   }
 
-  /// 触发结局序列
   Future<void> _triggerEndingSequence() async {
     _showEndingSequence = true;
-
-    // 根据角色类型生成不同的离别故事
     final endingMessage = _generateEndingMessage();
 
     final aiMessage = MessageModel(
@@ -194,14 +189,10 @@ class CompanionController extends ChangeNotifier {
     );
 
     _messages.add(aiMessage);
-
-    // 更新关系阶段为成熟期（即将结束）
     _currentCompanion = _currentCompanion!.advanceStage();
-
     _statusMessage = '${_currentCompanion!.name}即将离开...';
   }
 
-  /// 生成结局消息
   String _generateEndingMessage() {
     if (_currentCompanion == null) return '';
 
@@ -216,36 +207,27 @@ class CompanionController extends ChangeNotifier {
            '\n\n我是如此地珍惜与你的每一次对话...请记住我们在一起的美好时光。💫';
   }
 
-  /// 完成结局
   Future<void> completeEnding() async {
     if (_currentCompanion == null) return;
-
-    // 保存最终状态
     await _saveState();
-
     _statusMessage = '${_currentCompanion!.name}已经离开，但回忆永远不会消失...';
     notifyListeners();
   }
 
-  /// 生成AI回复
   Future<MessageModel> _generateAIResponse(String userInput) async {
-    // 模拟AI思考时间
     await Future.delayed(Duration(milliseconds: 1000 + (DateTime.now().millisecond % 1000)));
 
-    // 基于伴侣类型和关系阶段生成回复
     final response = await CompanionMemoryService.generateResponse(
       companion: _currentCompanion!,
       userInput: userInput,
       conversationHistory: _messages,
     );
 
-    // 更新好感度
     final favorabilityChange = _calculateFavorabilityChange(userInput);
     _currentCompanion = _currentCompanion!.updateFavorability(
       (_currentCompanion!.favorabilityScore + favorabilityChange).clamp(0, 100),
     );
 
-    // 检查是否需要升级关系阶段
     await _checkStageProgression();
 
     return MessageModel(
@@ -258,23 +240,19 @@ class CompanionController extends ChangeNotifier {
     );
   }
 
-  /// 添加开场消息
   Future<void> _addOpeningMessage() async {
     if (_currentCompanion == null) return;
 
-    // 故事介绍消息
     final storyMessage = MessageModel(
       id: 'msg_story_${DateTime.now().millisecondsSinceEpoch}',
       content: _currentCompanion!.meetingStory.storyText,
       isUser: false,
       timestamp: DateTime.now(),
       characterCount: _currentCompanion!.meetingStory.storyText.length,
-      densityCoefficient: 0, // 系统消息不计入token
+      densityCoefficient: 0,
     );
 
     _messages.add(storyMessage);
-
-    // AI的第一句话
     await Future.delayed(const Duration(milliseconds: 1500));
 
     final openingMessage = MessageModel(
@@ -289,25 +267,17 @@ class CompanionController extends ChangeNotifier {
     _messages.add(openingMessage);
   }
 
-  /// 计算token使用量
   int _calculateTokenUsage(String content) {
-    // 简单的token计算：中文约2字符=1token，英文约4字符=1token
     final chineseChars = content.replaceAll(RegExp(r'[^\u4e00-\u9fa5]'), '').length;
     final otherChars = content.length - chineseChars;
     return (chineseChars ~/ 2) + (otherChars ~/ 4) + 1;
   }
 
-  /// 计算好感度变化
   int _calculateFavorabilityChange(String userInput) {
-    // 基础好感度变化逻辑
-    int change = 1; // 基础参与分
-
-    // 字数适中加分
+    int change = 1;
     if (userInput.length >= 10 && userInput.length <= 50) {
       change += 2;
     }
-
-    // 关键词加分
     final positiveWords = ['喜欢', '开心', '有趣', '温暖', '美好'];
     for (final word in positiveWords) {
       if (userInput.contains(word)) {
@@ -315,16 +285,12 @@ class CompanionController extends ChangeNotifier {
         break;
       }
     }
-
-    // 提问加分（显示关心）
     if (userInput.contains('？') || userInput.contains('?')) {
       change += 3;
     }
-
     return change.clamp(-5, 10);
   }
 
-  /// 检查关系阶段进展
   Future<void> _checkStageProgression() async {
     if (_currentCompanion == null) return;
 
@@ -350,7 +316,6 @@ class CompanionController extends ChangeNotifier {
         }
         break;
       case RelationshipStage.mature:
-        // 保持在最高阶段
         break;
     }
 
@@ -360,25 +325,21 @@ class CompanionController extends ChangeNotifier {
     }
   }
 
-  /// 保存状态
   Future<void> _saveState() async {
     if (_currentCompanion == null) return;
-
     await _saveCompanion();
     await CompanionMemoryService.saveMessages(_currentCompanion!.id, _messages);
   }
 
-  /// 保存伴侣数据
   Future<void> _saveCompanion() async {
     if (_currentCompanion == null) return;
     await StorageService.saveCompanion(_currentCompanion!);
   }
 
-  /// 删除伴侣
   Future<void> deleteCompanion(String companionId) async {
     try {
       await StorageService.deleteCompanion(companionId);
-      await CompanionMemoryService.saveMessages(companionId, []); // 清空消息
+      await CompanionMemoryService.saveMessages(companionId, []);
 
       _existingCompanions.removeWhere((c) => c.id == companionId);
 
@@ -393,7 +354,6 @@ class CompanionController extends ChangeNotifier {
     }
   }
 
-  /// 获取可用的伴侣类型
   static List<CompanionTypeInfo> getAvailableCompanionTypes() {
     return [
       CompanionTypeInfo(
@@ -435,7 +395,6 @@ class CompanionController extends ChangeNotifier {
     ];
   }
 
-  /// 重置伴侣（重新开始）
   Future<void> resetCompanion() async {
     if (_currentCompanion == null) return;
 
@@ -445,7 +404,6 @@ class CompanionController extends ChangeNotifier {
     await createCompanion(name: companionName, type: companionType);
   }
 
-  /// 清除错误信息
   void clearError() {
     _statusMessage = '';
     notifyListeners();
@@ -458,7 +416,6 @@ class CompanionController extends ChangeNotifier {
   }
 }
 
-/// 伴侣类型信息
 class CompanionTypeInfo {
   final CompanionType type;
   final String name;

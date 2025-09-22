@@ -1,4 +1,4 @@
-// lib/routes/app_routes.dart (完整修复版)
+// lib/routes/app_routes.dart (完整调试版)
 
 import 'package:flutter/material.dart';
 import '../features/home/pages/home_page.dart';
@@ -38,61 +38,132 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> get routes {
     return {
-      login: (context) => const LoginPage(),
-      settings: (context) => const SettingsPage(),
-      batchUpload: (context) => const BatchUploadPage(),
-      antiPuaTraining: (context) => const AntiPUATrainingPage(),
-      combatMenu: (context) => const CombatMenuPage(),
+      login: (context) {
+        print('🟣 [Routes] 构建LoginPage');
+        return const LoginPage();
+      },
+      settings: (context) {
+        print('🟣 [Routes] 构建SettingsPage');
+        return const SettingsPage();
+      },
+      batchUpload: (context) {
+        print('🟣 [Routes] 构建BatchUploadPage');
+        return const BatchUploadPage();
+      },
+      antiPuaTraining: (context) {
+        print('🟣 [Routes] 构建AntiPUATrainingPage');
+        return const AntiPUATrainingPage();
+      },
+      combatMenu: (context) {
+        print('🟣 [Routes] 构建CombatMenuPage');
+        return const CombatMenuPage();
+      },
     };
   }
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    print('🟣 [Routes] onGenerateRoute 调用');
+    print('🟣 [Routes] 路由名称: ${settings.name}');
+    print('🟣 [Routes] 路由参数: ${settings.arguments}');
+
     switch (settings.name) {
       case home:
+        print('🟣 [Routes] 生成HomePage路由');
         return MaterialPageRoute(
-          builder: (context) => const HomePage(),
+          builder: (context) {
+            print('🟣 [Routes] 构建HomePage');
+            return const HomePage();
+          },
         );
 
       case characterSelection:
+        print('🟣 [Routes] 生成CharacterSelection路由');
         final args = settings.arguments as Map<String, dynamic>?;
+        print('🟣 [Routes] CharacterSelection参数: $args');
         final user = args?['user'] as UserModel?;
-        return MaterialPageRoute(
-          builder: (context) => CharacterGridPage(currentUser: user!),
-        );
+        if (user != null) {
+          print('🟣 [Routes] User参数正确: ${user.username}');
+          return MaterialPageRoute(
+            builder: (context) => CharacterGridPage(currentUser: user),
+          );
+        }
+        print('🔴 [Routes] CharacterSelection缺少用户参数');
+        return _errorRoute('缺少用户信息');
 
       case basicChat:
+        print('🟣 [Routes] 生成BasicChat路由');
         final args = settings.arguments as Map<String, dynamic>?;
+        print('🟣 [Routes] BasicChat参数: $args');
         if (args != null &&
             args['character'] != null &&
             args['user'] != null) {
+          final character = args['character'] as CharacterModel;
+          final user = args['user'] as UserModel;
+          print('🟣 [Routes] BasicChat参数正确 - Character: ${character.name}, User: ${user.username}');
           return MaterialPageRoute(
             builder: (context) => ChatPage(
-              character: args['character'] as CharacterModel,
-              currentUser: args['user'] as UserModel,
+              character: character,
+              currentUser: user,
             ),
           );
         }
+        print('🔴 [Routes] BasicChat缺少参数');
         return _errorRoute('缺少角色或用户信息');
 
-      // 修复：AI伴侣选择页面路由（不传递user参数）
       case companionSelection:
+        print('🟣 [Routes] 生成CompanionSelection路由');
         return MaterialPageRoute(
-          builder: (context) => const CompanionSelectionPage(),
+          builder: (context) {
+            print('🟣 [Routes] 构建CompanionSelectionPage');
+            return const CompanionSelectionPage();
+          },
         );
 
-      // 修复：AI伴侣聊天页面路由（不传递user参数）
       case companionChat:
+        print('🟣 [Routes] 生成CompanionChat路由');
         final args = settings.arguments as Map<String, dynamic>?;
-        if (args != null && args['companion'] != null) {
-          return MaterialPageRoute(
-            builder: (context) => CompanionChatPage(
-              companion: args['companion'] as CompanionModel,
-            ),
-          );
+        print('🟣 [Routes] CompanionChat参数: $args');
+        print('🟣 [Routes] CompanionChat参数类型: ${args.runtimeType}');
+
+        if (args != null) {
+          print('🟣 [Routes] 参数不为空，检查companion字段');
+          final companionData = args['companion'];
+          print('🟣 [Routes] companion字段: $companionData');
+          print('🟣 [Routes] companion字段类型: ${companionData.runtimeType}');
+
+          if (companionData != null) {
+            try {
+              CompanionModel companion;
+              if (companionData is CompanionModel) {
+                companion = companionData;
+                print('🟣 [Routes] companion参数类型正确: ${companion.name}');
+              } else if (companionData is Map<String, dynamic>) {
+                print('🟣 [Routes] companion是Map，尝试转换为CompanionModel');
+                companion = CompanionModel.fromJson(companionData);
+                print('🟣 [Routes] Map转换成功: ${companion.name}');
+              } else {
+                print('🔴 [Routes] companion参数类型错误: ${companionData.runtimeType}');
+                return _errorRoute('伴侣参数类型错误');
+              }
+
+              print('🟣 [Routes] 准备构建CompanionChatPage');
+              return MaterialPageRoute(
+                builder: (context) {
+                  print('🟣 [Routes] 开始构建CompanionChatPage - companion: ${companion.name}');
+                  return CompanionChatPage(companion: companion);
+                },
+              );
+            } catch (e) {
+              print('🔴 [Routes] CompanionChat参数转换错误: $e');
+              return _errorRoute('伴侣参数转换失败: $e');
+            }
+          }
         }
+        print('🔴 [Routes] CompanionChat缺少伴侣参数');
         return _errorRoute('缺少伴侣信息');
 
       case combatTraining:
+        print('🟣 [Routes] 生成CombatTraining路由');
         final args = settings.arguments as Map<String, dynamic>?;
         if (args != null && args['scenario'] != null) {
           return MaterialPageRoute(
@@ -105,6 +176,7 @@ class AppRoutes {
         return _errorRoute('缺少训练场景信息');
 
       case confessionAnalysis:
+        print('🟣 [Routes] 生成ConfessionAnalysis路由');
         final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
           builder: (context) => ConfessionAnalysisPage(
@@ -114,6 +186,7 @@ class AppRoutes {
         );
 
       case realChatAssistant:
+        print('🟣 [Routes] 生成RealChatAssistant路由');
         final args = settings.arguments as Map<String, dynamic>?;
         final user = args?['user'] as UserModel?;
         return MaterialPageRoute(
@@ -121,6 +194,7 @@ class AppRoutes {
         );
 
       case analysisDetail:
+        print('🟣 [Routes] 生成AnalysisDetail路由');
         final args = settings.arguments as Map<String, dynamic>?;
         if (args != null &&
             args['conversation'] != null &&
@@ -137,11 +211,13 @@ class AppRoutes {
         return _errorRoute('缺少对话信息');
 
       default:
+        print('🔴 [Routes] 未知路由: ${settings.name}');
         return _errorRoute('页面不存在');
     }
   }
 
   static Route<dynamic> _errorRoute([String? message]) {
+    print('🔴 [Routes] 生成错误路由: $message');
     return MaterialPageRoute(
       builder: (context) => Scaffold(
         appBar: AppBar(title: const Text('页面未找到')),
@@ -158,13 +234,17 @@ class AppRoutes {
               Text(
                 message ?? '页面不存在',
                 style: const TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
-                  home,
-                  (route) => false,
-                ),
+                onPressed: () {
+                  print('🟣 [Routes] 错误页面返回首页');
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    home,
+                    (route) => false,
+                  );
+                },
                 child: const Text('返回首页'),
               ),
             ],
