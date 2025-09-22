@@ -374,12 +374,12 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
                 Expanded(
                   child: TextField(
                     controller: _textController,
-                    decoration: InputDecoration(
-                      hintText: '和${widget.companion.name}聊聊...',
+                    decoration: const InputDecoration(
+                      hintText: '输入消息...',  // 修复：移除个性化提示文字
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.all(Radius.circular(24)),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
+                      contentPadding: EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
                       ),
