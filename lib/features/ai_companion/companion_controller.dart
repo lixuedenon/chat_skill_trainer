@@ -1,4 +1,4 @@
-// lib/features/ai_companion/companion_controller.dart (完整修复版)
+// lib/features/ai_companion/companion_controller.dart (恢复延迟回调版)
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';

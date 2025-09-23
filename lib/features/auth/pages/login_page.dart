@@ -1,4 +1,4 @@
-// lib/features/auth/pages/login_page.dart (正确修复版)
+// lib/features/auth/pages/login_page.dart (修改提示信息)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -27,7 +27,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 修复：直接使用现有的AuthController，不创建新实例
     return Scaffold(
       appBar: AppBar(
         title: const Text('登录'),
@@ -137,7 +136,7 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
-                      '演示账号：demo / 123456',
+                      '快速登录：a / 1',
                       style: TextStyle(fontSize: 12),
                     ),
                   ),
@@ -177,7 +176,7 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('注册'),
-        content: const Text('注册功能开发中，请使用演示账号登录'),
+        content: const Text('注册功能开发中，请使用快速登录: a / 1'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

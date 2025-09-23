@@ -1,4 +1,4 @@
-// lib/features/auth/auth_controller.dart
+// lib/features/auth/auth_controller.dart (修改登录信息)
 
 import 'package:flutter/foundation.dart';
 import '../../core/models/user_model.dart';
@@ -37,8 +37,9 @@ class AuthController extends ChangeNotifier {
     try {
       await Future.delayed(const Duration(seconds: 1)); // 模拟网络请求
 
-      // 简单的登录验证
-      if (username == 'demo' && password == '123456') {
+      // 修改：简化登录验证，支持 a/1 和原来的 demo/123456
+      if ((username == 'a' && password == '1') ||
+          (username == 'demo' && password == '123456')) {
         _currentUser = UserModel.newUser(
           id: 'user_${DateTime.now().millisecondsSinceEpoch}',
           username: username,

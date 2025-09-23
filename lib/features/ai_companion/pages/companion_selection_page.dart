@@ -1,4 +1,4 @@
-// lib/features/ai_companion/pages/companion_selection_page.dart (修复版)
+// lib/features/ai_companion/pages/companion_selection_page.dart (彻底修复闪烁版)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +7,7 @@ import '../../../core/models/user_model.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../companion_controller.dart';
 import '../companion_story_generator.dart';
+import 'companion_chat_page.dart'; // 添加导入
 
 class CompanionSelectionPage extends StatefulWidget {
   const CompanionSelectionPage({Key? key}) : super(key: key);
@@ -377,15 +378,24 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
       await _controller!.createCompanion(companion: companion);
       print('🔵 [SelectionPage] Controller.createCompanion 完成');
 
-      await Future.delayed(const Duration(milliseconds: 100));
-
+      // 关键修改：在跳转前的最后一刻设置加载状态，无延迟
       if (mounted) {
-        print('🔵 [SelectionPage] 准备跳转到聊天页面');
-        Navigator.of(context).pushReplacementNamed(
-          '/companion_chat',
-          arguments: {'companion': companion},
+        setState(() {
+          _isCreating = true; // 立即隐藏选择界面
+        });
+
+        print('🔵 [SelectionPage] 准备无动画跳转到聊天页面');
+        // 使用无动画的页面替换，彻底避免闪烁
+        Navigator.of(context).pushAndRemoveUntil(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                CompanionChatPage(companion: companion),
+            transitionDuration: Duration.zero, // 禁用进入动画
+            reverseTransitionDuration: Duration.zero, // 禁用退出动画
+          ),
+          (route) => route.isFirst, // 移除到首页为止
         );
-        print('🔵 [SelectionPage] 跳转完成');
+        print('🔵 [SelectionPage] 无动画页面替换完成');
       }
     } catch (e) {
       print('🔴 [SelectionPage] 创建新伴侣失败: $e');
@@ -443,6 +453,8 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
 
   Future<String?> _showNameInputDialog() async {
     final controller = TextEditingController();
+    print('🔵 [SelectionPage] 创建TextEditingController');
+
     try {
       final result = await showDialog<String>(
         context: context,
@@ -456,11 +468,17 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
               border: OutlineInputBorder(),
             ),
             autofocus: true,
+            onSubmitted: (value) {
+              if (value.trim().isNotEmpty) {
+                print('🔵 [SelectionPage] 用户输入名字: $value');
+                Navigator.of(context).pop(value.trim());
+              }
+            },
           ),
           actions: [
             TextButton(
               onPressed: () {
-                controller.dispose();
+                print('🔵 [SelectionPage] 用户取消名字输入');
                 Navigator.of(context).pop();
               },
               child: const Text('取消'),
@@ -469,6 +487,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
               onPressed: () {
                 final name = controller.text.trim();
                 if (name.isNotEmpty) {
+                  print('🔵 [SelectionPage] 用户输入名字: $name');
                   Navigator.of(context).pop(name);
                 }
               },
@@ -477,20 +496,39 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
           ],
         ),
       );
+      print('🔵 [SelectionPage] 对话框关闭，结果: $result');
       return result;
     } finally {
-      if (controller.hasListeners) {
-        controller.dispose();
-      }
+      // 延迟dispose以避免过早销毁
+      print('🔵 [SelectionPage] 延迟dispose TextEditingController');
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (controller.hasListeners) {
+          print('🔵 [SelectionPage] 执行TextEditingController.dispose()');
+          controller.dispose();
+        }
+      });
     }
   }
 
   void _continueWithCompanion(CompanionModel companion) {
     print('🔵 [SelectionPage] _continueWithCompanion: ${companion.name}');
-    Navigator.of(context).pushNamed(
-      '/companion_chat',
-      arguments: {'companion': companion},
+
+    // 立即隐藏选择界面并跳转，无延迟
+    setState(() {
+      _isCreating = true; // 显示加载状态，隐藏选择界面
+    });
+
+    // 立即跳转，无延迟
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            CompanionChatPage(companion: companion),
+        transitionDuration: Duration.zero, // 禁用进入动画
+        reverseTransitionDuration: Duration.zero, // 禁用退出动画
+      ),
+      (route) => route.isFirst, // 移除到首页为止
     );
+    print('🔵 [SelectionPage] 继续伴侣无动画跳转完成');
   }
 
   UserModel _createDummyUser() {
