@@ -1,4 +1,4 @@
-// lib/core/constants/scenario_data.dart
+// lib/core/constants/scenario_data.dart (重新设计版)
 
 /// 训练场景数据配置
 class ScenarioData {
@@ -7,156 +7,274 @@ class ScenarioData {
     'anti_routine': [
       CombatScenario(
         id: 'routine_001',
-        title: '你还有别的女性朋友吗？',
+        title: '探底测试：女性朋友问题',
         category: '反套路专项',
-        background: '你们约会几次了，气氛很好。她突然问了这个问题，这是典型的测试性问题...',
+        background: '你们约会几次了，气氛很好。她突然问了这个试探性问题，想要了解你的社交圈和态度...',
         question: '你还有别的女性朋友吗？',
         options: [
           ScenarioOption(
             text: '没有，你是唯一的',
             isCorrect: false,
-            feedback: '这样回答显得虚假，容易让人不信任。',
+            feedback: '过度表态显得缺乏社交价值，可能让对方产生压力。',
           ),
           ScenarioOption(
-            text: '有几个普通朋友',
+            text: '有几个普通朋友，大家关系都很正常',
             isCorrect: true,
-            feedback: '诚实且有界限感，显示你的社交能力正常。',
+            feedback: '诚实且有界限感，展现正常社交圈，增加自己的吸引力。',
           ),
           ScenarioOption(
-            text: '这重要吗？',
+            text: '这重要吗？我们聊点别的',
             isCorrect: false,
             feedback: '回避问题会让对方觉得你在隐瞒什么。',
           ),
         ],
-        explanation: '诚实但有界限感的回答最好。既不会显得你没有朋友（缺乏魅力），也不会让她感到威胁。',
-        tags: ['测试性问题', '界限设定', '诚实沟通'],
+        explanation: '面对试探性问题，诚实但有分寸的回答最有效。既展现了社交能力，又没有让对方感到威胁。',
+        tags: ['测试性问题', '社交价值', '边界设定'],
       ),
       CombatScenario(
         id: 'routine_002',
-        title: '你觉得我胖吗？',
+        title: '情感绑架：时间投资测试',
         category: '反套路专项',
-        background: '你们在餐厅约会，她点了沙拉，你点了牛排。她看着镜子突然问...',
-        question: '你觉得我胖吗？',
+        background: '你今晚原本有其他安排，她突然说想见你，这是在测试你对她的重视程度...',
+        question: '我知道你今晚有安排，但我突然很想见你',
         options: [
           ScenarioOption(
-            text: '不胖啊，你很瘦',
+            text: '我马上取消安排过来找你',
             isCorrect: false,
-            feedback: '太直接的否定，没有解决她的内心担忧。',
+            feedback: '过度迎合会失去独立性，降低自己的价值。',
           ),
           ScenarioOption(
-            text: '我觉得健康最重要',
+            text: '我也想见你，但今天确实不方便，明天怎么样？',
             isCorrect: true,
-            feedback: '转移焦点到健康，既没有直接评价外貌，又表达了关心。',
+            feedback: '既表达了想见的意愿，又坚持了自己的边界，展现成熟。',
           ),
           ScenarioOption(
-            text: '你在我心里最美',
+            text: '你怎么总是这样临时通知',
             isCorrect: false,
-            feedback: '太过甜腻，可能显得不真诚。',
+            feedback: '抱怨会破坏关系氛围，让对方感到被责备。',
           ),
         ],
-        explanation: '女生问这种问题通常是在寻求安慰和认可，而不是真的要你评价她的身材。',
-        tags: ['外貌焦虑', '情感支持', '巧妙回应'],
+        explanation: '保持自己的计划和节奏是维护平等关系的关键，同时要表达关心。',
+        tags: ['时间管理', '边界坚持', '关系平等'],
       ),
-    ],
-    'crisis_handling': [
       CombatScenario(
-        id: 'crisis_001',
-        title: '说错话快速补救',
-        category: '危机处理专项',
-        background: '你刚才说了一句话，从她的表情看出她不高兴了...',
-        question: '刚才我的表达可能不太合适，让你不舒服了吗？',
+        id: 'routine_003',
+        title: '价值观试探：经济观念',
+        category: '反套路专项',
+        background: '约会进行到一半，在讨论买单时，她抛出了这个问题来了解你的价值观...',
+        question: '你觉得约会应该谁买单？',
         options: [
           ScenarioOption(
-            text: '我不是那个意思，你误会了',
+            text: '当然应该我买单，这是绅士风度',
             isCorrect: false,
-            feedback: '推卸责任，容易激化矛盾。',
+            feedback: '传统观念可能显得刻板，不利于平等关系发展。',
           ),
           ScenarioOption(
-            text: '对不起，我刚才的话确实不合适',
+            text: '我觉得可以轮流请客，或者AA，看具体情况',
             isCorrect: true,
-            feedback: '主动承认错误，显示成熟和担当。',
+            feedback: '展现现代平等观念，有利于建立健康的伙伴关系。',
           ),
           ScenarioOption(
-            text: '你怎么这么敏感？',
+            text: '既然问了，那就AA制吧',
             isCorrect: false,
-            feedback: '指责对方，会让情况更糟。',
+            feedback: '过于直接可能让对方觉得你计较或不够体贴。',
           ),
         ],
-        explanation: '说错话时，真诚道歉比解释更重要。承认错误显示你的成熟。',
-        tags: ['道歉技巧', '责任担当', '危机化解'],
+        explanation: '现代关系中，平等和灵活的经济观念更受欢迎，体现了对对方的尊重。',
+        tags: ['价值观展示', '经济观念', '平等关系'],
       ),
     ],
-    'high_difficulty': [
+    'workplace_crisis': [
       CombatScenario(
-        id: 'difficult_001',
-        title: '傲娇女神攻略',
-        category: '高难度挑战',
-        background: '她是公认的女神，性格有些高冷，很多人追求但都被拒绝了...',
-        question: '我平时很忙的，不是什么人都有时间见面。',
+        id: 'workplace_001',
+        title: '上级私下接触',
+        category: '职场高危',
+        background: '公司聚餐后，平时严肃的女上级单独找你聊天，氛围变得微妙...',
+        question: '工作之外，我其实是个很随和的人',
         options: [
           ScenarioOption(
-            text: '那我很荣幸能见到你',
+            text: '是的，您平时工作很辛苦',
             isCorrect: false,
-            feedback: '过于谦卑，降低了自己的价值。',
+            feedback: '太正式的称呼拉开了距离，错失拉近机会。',
           ),
           ScenarioOption(
-            text: '我也是，能见面说明我们都很重视这次机会',
+            text: '能感觉到，私下的你更真实自然',
             isCorrect: true,
-            feedback: '平等对待，既认可她的价值，也肯定自己的价值。',
+            feedback: '既认可了她的话，又自然地拉近了距离，但保持了分寸。',
           ),
           ScenarioOption(
-            text: '那你今天怎么有时间？',
+            text: '那我们以后可以经常私下交流',
             isCorrect: false,
-            feedback: '质疑她的话，可能引起不快。',
+            feedback: '过于主动可能让对方感到压力，职场关系需要谨慎。',
           ),
         ],
-        explanation: '面对高价值女性，要保持自己的价值感，平等交流而不是卑微讨好。',
-        tags: ['高价值对话', '自信展示', '平等交流'],
+        explanation: '职场关系转向私人接触需要格外谨慎，要渐进式发展，避免过急。',
+        tags: ['职场关系', '边界把握', '渐进发展'],
+      ),
+      CombatScenario(
+        id: 'workplace_002',
+        title: '同事暧昧试探',
+        category: '职场高危',
+        background: '项目合作中，女同事开始有一些暧昧的举动和话语，你需要恰当回应...',
+        question: '和你一起工作特别开心，感觉很有默契',
+        options: [
+          ScenarioOption(
+            text: '我也是，我们很合拍',
+            isCorrect: true,
+            feedback: '既回应了好意，又保持在工作层面，安全且友善。',
+          ),
+          ScenarioOption(
+            text: '是啊，也许我们可以发展点工作以外的关系',
+            isCorrect: false,
+            feedback: '在职场环境中过于直接可能造成不必要的风险。',
+          ),
+          ScenarioOption(
+            text: '嗯，专业合作确实很重要',
+            isCorrect: false,
+            feedback: '过于冷淡可能让对方觉得被拒绝，影响工作关系。',
+          ),
+        ],
+        explanation: '职场暧昧需要谨慎处理，既不要过于冷淡，也不要过于激进。',
+        tags: ['职场暧昧', '风险控制', '关系平衡'],
+      ),
+      CombatScenario(
+        id: 'workplace_003',
+        title: '客户关系越界',
+        category: '职场高危',
+        background: '重要女客户在商务场合表现出超出工作范围的兴趣，需要专业处理...',
+        question: '合作这么愉快，私下我们也可以做朋友',
+        options: [
+          ScenarioOption(
+            text: '当然可以，我很愿意',
+            isCorrect: false,
+            feedback: '客户关系复杂，贸然答应可能带来职业风险。',
+          ),
+          ScenarioOption(
+            text: '很荣幸，不过我习惯将工作和私生活分开',
+            isCorrect: true,
+            feedback: '礼貌地设定界限，既不得罪客户，又保护自己。',
+          ),
+          ScenarioOption(
+            text: '这个...公司有相关规定',
+            isCorrect: false,
+            feedback: '推给公司规定显得不够诚恳，可能让客户不快。',
+          ),
+        ],
+        explanation: '客户关系需要专业边界，礼貌但坚定地设定界限是最佳策略。',
+        tags: ['客户关系', '职业边界', '风险管理'],
       ),
     ],
-  };
-
-  /// 反PUA训练场景数据
-  static const Map<String, List<AntiPUAScenario>> antiPUAScenarios = {
-    'recognition': [
-      AntiPUAScenario(
-        id: 'pua_001',
-        title: '"你和别的女生不一样"',
-        category: 'PUA话术识别',
-        puaTactic: '你和别的女生不一样，你很特别。',
-        hiddenIntent: '通过"特别"来让你产生优越感，降低防备心。',
-        counterStrategies: [
-          '谢谢夸奖，每个人都是独特的。',
-          '是吗？具体哪里不一样呢？',
-          '我确实很特别，这点我很清楚。',
+    'social_crisis': [
+      CombatScenario(
+        id: 'social_001',
+        title: '聚会冷场救急',
+        category: '聚会冷场处理',
+        background: '朋友聚会时，大家正聊得热烈，突然话题断了，现场陷入尴尬的沉默...',
+        question: '(全场沉默了30秒，气氛变得尴尬)',
+        options: [
+          ScenarioOption(
+            text: '怎么突然都不说话了？',
+            isCorrect: false,
+            feedback: '直接指出尴尬只会让场面更加尴尬。',
+          ),
+          ScenarioOption(
+            text: '刚才那首背景音乐不错，是什么歌？',
+            isCorrect: true,
+            feedback: '转移到中性话题，自然打破沉默，重新激活氛围。',
+          ),
+          ScenarioOption(
+            text: '要不我们玩个游戏吧',
+            isCorrect: false,
+            feedback: '过于刻意的转场可能显得突兀。',
+          ),
         ],
-        explanation: 'PUA常用"你很特别"来建立虚假的亲密感。正确的回应是保持理性，不被虚假的赞美迷惑。',
-        warningLevel: PUAWarningLevel.medium,
+        explanation: '冷场时最好找一个在场的中性元素作为新话题，自然过渡。',
+        tags: ['冷场处理', '话题转移', '氛围调节'],
       ),
-      AntiPUAScenario(
-        id: 'pua_002',
-        title: '"如果你爱我就会..."',
-        category: 'PUA话术识别',
-        puaTactic: '如果你真的爱我，就会为我做这件事。',
-        hiddenIntent: '通过道德绑架来操控你的行为。',
-        counterStrategies: [
-          '爱不是用来证明的，而是互相尊重的。',
-          '真正爱我的人不会让我为难。',
-          '我们可以理性讨论这个问题。',
+      CombatScenario(
+        id: 'social_002',
+        title: '群聊焦点争夺',
+        category: '聚会冷场处理',
+        background: '在朋友聚会中，有人一直在讲自己的成功故事，垄断了谈话，你想适当参与...',
+        question: '(某人已经连续讲了20分钟自己的工作成就)',
+        options: [
+          ScenarioOption(
+            text: '哇，真厉害！我也有个类似的经历...',
+            isCorrect: true,
+            feedback: '先认可对方，再自然地分享，平衡话语权。',
+          ),
+          ScenarioOption(
+            text: '让其他人也说说吧',
+            isCorrect: false,
+            feedback: '直接打断可能让对方感到不快。',
+          ),
+          ScenarioOption(
+            text: '继续保持沉默',
+            isCorrect: false,
+            feedback: '错失参与机会，可能边缘化自己。',
+          ),
         ],
-        explanation: '这是典型的情感操控，用"爱"来绑架对方。健康的感情是相互尊重的。',
-        warningLevel: PUAWarningLevel.high,
+        explanation: '在群体谈话中，通过认可他人再分享自己的方式最容易获得话语权。',
+        tags: ['群体交流', '话语权', '社交技巧'],
+      ),
+      CombatScenario(
+        id: 'social_003',
+        title: '敏感话题转移',
+        category: '聚会冷场处理',
+        background: '聚会中有人提起了敏感的政治话题，现场气氛开始紧张，需要及时化解...',
+        question: '(有人开始激烈讨论敏感政治话题，现场气氛紧张)',
+        options: [
+          ScenarioOption(
+            text: '我们不要聊这些沉重的话题',
+            isCorrect: false,
+            feedback: '直接阻止可能让提话题的人感到被否定。',
+          ),
+          ScenarioOption(
+            text: '说到这个，我想起今天看到一个有趣的新闻...',
+            isCorrect: true,
+            feedback: '承接话题但转向轻松方向，巧妙化解紧张。',
+          ),
+          ScenarioOption(
+            text: '我觉得大家说得都有道理',
+            isCorrect: false,
+            feedback: '模糊表态可能让争论继续，没有有效转移话题。',
+          ),
+        ],
+        explanation: '面对敏感话题，最好的策略是承接但转向，而不是直接阻止或参与争论。',
+        tags: ['敏感话题', '危机化解', '气氛控制'],
+      ),
+      CombatScenario(
+        id: 'social_004',
+        title: '新人融入协助',
+        category: '聚会冷场处理',
+        background: '聚会中来了一个大家都不太熟悉的新人，TA显得有些拘谨，你想帮助TA融入...',
+        question: '(新人站在角落，看起来有些格格不入)',
+        options: [
+          ScenarioOption(
+            text: '直接走过去和新人聊天',
+            isCorrect: false,
+            feedback: '单独关注可能让新人感到被特殊化。',
+          ),
+          ScenarioOption(
+            text: '把新人介绍给其他人，并找共同话题',
+            isCorrect: true,
+            feedback: '通过介绍和共同话题帮助新人自然融入群体。',
+          ),
+          ScenarioOption(
+            text: '让新人自己慢慢适应',
+            isCorrect: false,
+            feedback: '缺乏主动帮助，错失展现社交能力的机会。',
+          ),
+        ],
+        explanation: '帮助新人融入群体既展现了自己的社交能力，又营造了友好氛围。',
+        tags: ['新人融入', '社交引导', '群体和谐'],
       ),
     ],
   };
 
   /// 根据类别获取场景列表
   static List<CombatScenario> getCombatScenariosByCategory(String category) {
-    final allScenarios = <CombatScenario>[];
-    for (final scenarios in combatScenarios.values) {
-      allScenarios.addAll(scenarios.where((s) => s.category == category));
-    }
-    return allScenarios;
+    return combatScenarios[category] ?? [];
   }
 
   /// 根据标签获取场景列表
@@ -174,7 +292,72 @@ class ScenarioData {
     for (final scenarios in combatScenarios.values) {
       allScenarios.addAll(scenarios);
     }
+    if (allScenarios.isEmpty) {
+      throw Exception('没有可用的训练场景');
+    }
     return allScenarios[DateTime.now().millisecond % allScenarios.length];
+  }
+
+  /// 获取所有可用的训练类别
+  static List<String> getAvailableCategories() {
+    return combatScenarios.keys.toList();
+  }
+
+  /// 获取场景总数
+  static int getTotalScenarioCount() {
+    int total = 0;
+    for (final scenarios in combatScenarios.values) {
+      total += scenarios.length;
+    }
+    return total;
+  }
+
+  /// 获取某类别的场景数量
+  static int getCategoryScenarioCount(String category) {
+    return combatScenarios[category]?.length ?? 0;
+  }
+
+  /// 获取训练模块信息
+  static List<TrainingModule> getTrainingModules() {
+    return [
+      TrainingModule(
+        id: 'anti_routine',
+        name: '反套路专项',
+        icon: '🎯',
+        description: '识破并优雅应对各种测试',
+        scenarios: [
+          '探底测试：女性朋友问题',
+          '情感绑架：时间投资测试',
+          '价值观试探：经济观念',
+        ],
+        difficulty: TrainingDifficulty.medium,
+      ),
+      TrainingModule(
+        id: 'workplace_crisis',
+        name: '职场高危',
+        icon: '💼',
+        description: '职场关系的专业处理',
+        scenarios: [
+          '上级私下接触',
+          '同事暧昧试探',
+          '客户关系越界',
+        ],
+        difficulty: TrainingDifficulty.hard,
+      ),
+      TrainingModule(
+        id: 'social_crisis',
+        name: '聚会冷场处理',
+        icon: '🎉',
+        description: '社交场合的氛围调节',
+        scenarios: [
+          '聚会冷场救急',
+          '群聊焦点争夺',
+          '敏感话题转移',
+          '新人融入协助',
+        ],
+        difficulty: TrainingDifficulty.easy,
+      ),
+    ];
   }
 }
 
@@ -214,32 +397,28 @@ class ScenarioOption {
   });
 }
 
-/// 反PUA训练场景模型
-class AntiPUAScenario {
+/// 训练模块信息
+class TrainingModule {
   final String id;
-  final String title;
-  final String category;
-  final String puaTactic;
-  final String hiddenIntent;
-  final List<String> counterStrategies;
-  final String explanation;
-  final PUAWarningLevel warningLevel;
+  final String name;
+  final String icon;
+  final String description;
+  final List<String> scenarios;
+  final TrainingDifficulty difficulty;
 
-  const AntiPUAScenario({
+  const TrainingModule({
     required this.id,
-    required this.title,
-    required this.category,
-    required this.puaTactic,
-    required this.hiddenIntent,
-    required this.counterStrategies,
-    required this.explanation,
-    required this.warningLevel,
+    required this.name,
+    required this.icon,
+    required this.description,
+    required this.scenarios,
+    required this.difficulty,
   });
 }
 
-/// PUA警告等级
-enum PUAWarningLevel {
-  low,    // 低危险性
-  medium, // 中等危险性
-  high,   // 高危险性
+/// 训练难度枚举
+enum TrainingDifficulty {
+  easy,    // 简单
+  medium,  // 中等
+  hard,    // 困难
 }

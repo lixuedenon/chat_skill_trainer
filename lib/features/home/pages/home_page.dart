@@ -1,10 +1,10 @@
-// lib/features/home/pages/home_page.dart (修复版)
+// lib/features/home/pages/home_page.dart (完整版 - 调整模块布局)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../home_controller.dart';
 import '../../../core/models/user_model.dart';
-import '../../auth/auth_controller.dart';  // 添加这个导入
+import '../../auth/auth_controller.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -107,7 +107,11 @@ class _HomePageState extends State<HomePage> {
             Row(
               children: [
                 CircleAvatar(
-                  child: Text(user.username.substring(0, 1).toUpperCase()),
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: Text(
+                    user.username.substring(0, 1).toUpperCase(),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -160,8 +164,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCoreModules(HomeController controller) {
+    // 🔥 调整：添加批量分析，移除实战训练营
     final coreModules = controller.availableModules.where((module) =>
-      ['basic_chat', 'ai_companion', 'combat_training', 'anti_pua'].contains(module.id)
+      ['basic_chat', 'ai_companion', 'batch_chat_analyzer', 'anti_pua'].contains(module.id)
     ).toList();
 
     return GridView.builder(
@@ -181,8 +186,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildAssistantModules(HomeController controller) {
+    // 🔥 调整：添加实战训练营到智能辅助工具区域
     final assistantModules = controller.availableModules.where((module) =>
-      ['confession_predictor', 'real_chat_assistant'].contains(module.id)
+      ['combat_training', 'confession_predictor', 'real_chat_assistant'].contains(module.id)
     ).toList();
 
     return GridView.builder(
@@ -214,6 +220,25 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // 🔥 新增：为批量分析添加特殊标记
+              if (module.id == 'batch_chat_analyzer')
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    '🔥 核心功能',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
               Text(
                 module.icon,
                 style: const TextStyle(fontSize: 32),
@@ -347,6 +372,9 @@ class _HomePageState extends State<HomePage> {
       case 'ai_companion':
         Navigator.pushNamed(context, '/companion_selection');
         break;
+      case 'batch_chat_analyzer': // 🔥 新增：批量分析导航
+        Navigator.pushNamed(context, '/batch_upload');
+        break;
       case 'combat_training':
         Navigator.pushNamed(context, '/combat_menu');
         break;
@@ -394,6 +422,8 @@ class _HomePageState extends State<HomePage> {
         return '需要VIP会员才能使用此功能';
       case 'confession_predictor':
         return '需要完成至少5次对话才能解锁';
+      case 'combat_training':
+        return '需要登录账户才能使用';
       default:
         return '暂未满足解锁条件';
     }

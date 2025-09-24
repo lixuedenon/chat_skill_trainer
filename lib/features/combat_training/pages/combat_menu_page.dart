@@ -1,4 +1,4 @@
-// lib/features/combat_training/pages/combat_menu_page.dart
+// lib/features/combat_training/pages/combat_menu_page.dart (更新版)
 
 import 'package:flutter/material.dart';
 import '../../../core/constants/scenario_data.dart';
@@ -36,11 +36,11 @@ class CombatMenuPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.military_tech, color: Colors.amber, size: 28),
-                SizedBox(width: 12),
-                Text(
+                const Icon(Icons.military_tech, color: Colors.amber, size: 28),
+                const SizedBox(width: 12),
+                const Text(
                   '实战训练营',
                   style: TextStyle(
                     fontSize: 20,
@@ -51,12 +51,12 @@ class CombatMenuPage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              '专项技能训练，应对复杂社交场景',
+              '真实社交场景训练，提升应变能力',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 8),
             const Text(
-              '✓ 真实场景模拟\n✓ 专业解析指导\n✓ 快速技能提升',
+              '• 反套路应对策略\n• 职场关系处理\n• 社交危机化解',
               style: TextStyle(fontSize: 14),
             ),
           ],
@@ -79,42 +79,48 @@ class CombatMenuPage extends StatelessWidget {
         const SizedBox(height: 12),
         _buildModuleCard(
           context,
-          icon: '📚',
+          icon: '🎯',
           title: '反套路专项',
-          description: '应对各种测试性问题',
+          description: '识破并优雅应对各种测试',
           scenarios: [
-            '"你还有别的女性朋友吗？"',
-            '"你觉得我胖吗？"',
-            '"随便，你决定就好"',
+            '探底测试：女性朋友问题',
+            '情感绑架：时间投资测试',
+            '价值观试探：经济观念',
           ],
           category: 'anti_routine',
+          difficulty: '中级',
+          difficultyColor: Colors.orange,
         ),
         const SizedBox(height: 12),
         _buildModuleCard(
           context,
-          icon: '🆘',
-          title: '危机处理专项',
-          description: '化解尴尬，重建氛围',
+          icon: '💼',
+          title: '职场高危',
+          description: '职场关系的专业处理',
           scenarios: [
-            '说错话快速补救',
-            '冷场破冰技巧',
-            '敏感话题转移',
+            '上级私下接触',
+            '同事暧昧试探',
+            '客户关系越界',
           ],
-          category: 'crisis_handling',
+          category: 'workplace_crisis',
+          difficulty: '高级',
+          difficultyColor: Colors.red,
         ),
         const SizedBox(height: 12),
         _buildModuleCard(
           context,
-          icon: '🎯',
-          title: '高难度挑战',
-          description: '攻克复杂社交场景',
+          icon: '🎉',
+          title: '聚会冷场处理',
+          description: '社交场合的氛围调节',
           scenarios: [
-            '傲娇女神攻略',
-            '职场权威沟通',
+            '聚会冷场救急',
             '群聊焦点争夺',
+            '敏感话题转移',
+            '新人融入协助',
           ],
-          category: 'high_difficulty',
-          isAdvanced: true,
+          category: 'social_crisis',
+          difficulty: '初级',
+          difficultyColor: Colors.green,
         ),
       ],
     );
@@ -127,8 +133,11 @@ class CombatMenuPage extends StatelessWidget {
     required String description,
     required List<String> scenarios,
     required String category,
-    bool isAdvanced = false,
+    required String difficulty,
+    required Color difficultyColor,
   }) {
+    final scenarioCount = ScenarioData.getCategoryScenarioCount(category);
+
     return Card(
       child: InkWell(
         onTap: () => _navigateToTraining(context, category),
@@ -158,27 +167,25 @@ class CombatMenuPage extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            if (isAdvanced) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade100,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Text(
-                                  '高级',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: difficultyColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                difficulty,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: difficultyColor,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ],
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -192,14 +199,26 @@ class CombatMenuPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios, size: 16),
+                  Column(
+                    children: [
+                      Text(
+                        '$scenarioCount题',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 16),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
               const Divider(),
               const SizedBox(height: 8),
               const Text(
-                '包含场景：',
+                '训练场景：',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -215,7 +234,7 @@ class CombatMenuPage extends StatelessWidget {
                       width: 4,
                       height: 4,
                       decoration: const BoxDecoration(
-                        color: Colors.grey,
+                        color: Colors.blue,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -251,7 +270,7 @@ class CombatMenuPage extends StatelessWidget {
                 Icon(Icons.trending_up, color: Colors.green),
                 SizedBox(width: 8),
                 Text(
-                  '训练记录',
+                  '训练统计',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -263,23 +282,43 @@ class CombatMenuPage extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatItem('完成场景', '0', Icons.check_circle),
+                  child: _buildStatItem('已完成', '0', Icons.check_circle),
                 ),
                 Expanded(
                   child: _buildStatItem('正确率', '0%', Icons.military_tech),
                 ),
                 Expanded(
-                  child: _buildStatItem('等级', 'D级', Icons.star),
+                  child: _buildStatItem('当前等级', 'D级', Icons.star),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            const Text(
-              '💡 提示：完成更多训练可以解锁高级模块',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-                fontStyle: FontStyle.italic,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '训练建议',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '• 建议从"聚会冷场处理"开始，难度较低\n• 每个模块建议完成70%以上再进入下一个\n• 职场高危模块需谨慎，建议有一定经验后练习',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

@@ -64,8 +64,9 @@ class HomeController extends ChangeNotifier {
     _modules = [
       BasicChatModule(_currentUser),
       AICompanionModule(_currentUser),
-      CombatTrainingModule(_currentUser),
+      BatchChatAnalyzerModule(_currentUser), // 🔥 新增：批量聊天记录分析模块
       AntiPUAModule(_currentUser),
+      CombatTrainingModule(_currentUser), // 移至智能辅助工具区域
       ConfessionPredictorModule(_currentUser),
       RealChatAssistantModule(_currentUser),
     ];
@@ -139,29 +140,29 @@ class AICompanionModule extends TrainingModule {
   }
 }
 
-/// 实战训练营模块
-class CombatTrainingModule extends TrainingModule {
-  CombatTrainingModule(UserModel? user) : super(user);
+/// 🔥 新增：批量聊天记录分析模块
+class BatchChatAnalyzerModule extends TrainingModule {
+  BatchChatAnalyzerModule(UserModel? user) : super(user);
 
   @override
-  String get id => 'combat_training';
+  String get id => 'batch_chat_analyzer';
 
   @override
-  String get name => '实战训练营';
+  String get name => '聊天记录分析';
 
   @override
-  String get icon => '🎪';
+  String get icon => '📊';
 
   @override
-  String get description => '专项技能训练，应对复杂社交场景';
+  String get description => '上传聊天记录，AI智能分析告白成功率';
 
   @override
-  bool get isUnlocked => user != null; // 需要登录
+  bool get isUnlocked => true; // 核心功能，免费开放
 
   @override
   Future<void> launch() async {
-    // 导航到训练营菜单
-    // Navigator.pushNamed(context, '/combat_menu');
+    // 直接导航到批量上传页面，不需要传递用户参数
+    // Navigator.pushNamed(context, '/batch_upload');
   }
 }
 
@@ -187,6 +188,32 @@ class AntiPUAModule extends TrainingModule {
   @override
   Future<void> launch() async {
     // Navigator.pushNamed(context, '/anti_pua_training');
+  }
+}
+
+/// 实战训练营模块（移至智能辅助工具区域）
+class CombatTrainingModule extends TrainingModule {
+  CombatTrainingModule(UserModel? user) : super(user);
+
+  @override
+  String get id => 'combat_training';
+
+  @override
+  String get name => '实战训练营';
+
+  @override
+  String get icon => '🎪';
+
+  @override
+  String get description => '专项技能训练，应对复杂社交场景';
+
+  @override
+  bool get isUnlocked => user != null; // 需要登录
+
+  @override
+  Future<void> launch() async {
+    // 导航到训练营菜单
+    // Navigator.pushNamed(context, '/combat_menu');
   }
 }
 

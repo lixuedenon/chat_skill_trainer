@@ -1,4 +1,4 @@
-// lib/features/combat_training/pages/combat_training_page.dart
+// lib/features/combat_training/pages/combat_training_page.dart (自动开始版)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +6,7 @@ import '../combat_controller.dart';
 import '../../../core/constants/scenario_data.dart';
 import '../../../core/models/user_model.dart';
 
-class CombatTrainingPage extends StatelessWidget {
+class CombatTrainingPage extends StatefulWidget {
   final String scenario;
   final UserModel? user;
 
@@ -17,18 +17,122 @@ class CombatTrainingPage extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<CombatTrainingPage> createState() => _CombatTrainingPageState();
+}
+
+class _CombatTrainingPageState extends State<CombatTrainingPage> {
+  late CombatController _controller;
+  bool _isInitialized = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    print('🔴 [CombatTraining] initState - scenario: ${widget.scenario}');
+    _initializeTraining();
+  }
+
+  Future<void> _initializeTraining() async {
+    try {
+      print('🔴 [CombatTraining] 开始初始化训练');
+
+      // 创建控制器
+      _controller = CombatController(
+        user: widget.user ?? UserModel.newUser(
+          id: 'guest',
+          username: 'Guest',
+          email: ''
+        )
+      );
+
+      print('🔴 [CombatTraining] Controller创建成功');
+
+      // 自动开始训练会话
+      await _controller.startTrainingSession(widget.scenario);
+      print('🔴 [CombatTraining] 训练会话开始成功');
+
+      setState(() {
+        _isInitialized = true;
+      });
+
+    } catch (e) {
+      print('🔴 [CombatTraining] 初始化失败: $e');
+      setState(() {
+        _error = e.toString();
+        _isInitialized = true; // 设置为true以显示错误界面
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CombatController(user: user ?? UserModel.newUser(id: 'guest', username: 'Guest', email: '')),
+    print('🔴 [CombatTraining] build - initialized: $_isInitialized, error: $_error');
+
+    if (!_isInitialized) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(_getScenarioTitle(widget.scenario)),
+          centerTitle: true,
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('正在准备训练场景...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(_getScenarioTitle(widget.scenario)),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('加载失败: $_error'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _isInitialized = false;
+                    _error = null;
+                  });
+                  _initializeTraining();
+                },
+                child: const Text('重试'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('返回菜单'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ChangeNotifierProvider.value(
+      value: _controller,
       child: Consumer<CombatController>(
         builder: (context, controller, child) {
           return Scaffold(
             appBar: AppBar(
-              title: Text(_getScenarioTitle(scenario)),
+              title: Text(_getScenarioTitle(widget.scenario)),
               centerTitle: true,
             ),
             body: controller.currentScenario == null
-                ? _buildLoadingScreen(context, controller, scenario)
+                ? _buildNoScenarioScreen(context)
                 : _buildTrainingScreen(context, controller),
           );
         },
@@ -36,18 +140,18 @@ class CombatTrainingPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLoadingScreen(BuildContext context, CombatController controller, String scenario) {
+  Widget _buildNoScenarioScreen(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
+          const Icon(Icons.warning, size: 64, color: Colors.orange),
           const SizedBox(height: 16),
-          const Text('正在准备训练场景...'),
-          const SizedBox(height: 32),
+          const Text('没有找到训练场景'),
+          const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => controller.startTrainingSession(scenario),
-            child: const Text('开始训练'),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('返回菜单'),
           ),
         ],
       ),
@@ -56,6 +160,7 @@ class CombatTrainingPage extends StatelessWidget {
 
   Widget _buildTrainingScreen(BuildContext context, CombatController controller) {
     final scenario = controller.currentScenario!;
+    print('🔴 [CombatTraining] 构建训练界面 - scenario: ${scenario.title}');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -92,7 +197,8 @@ class CombatTrainingPage extends StatelessWidget {
     final session = controller.currentSession;
     if (session == null) return const SizedBox();
 
-    final progress = session.currentScenarioIndex / session.scenarios.length;
+    final progress = (session.currentScenarioIndex - 1) / session.scenarios.length;
+    final currentIndex = session.currentScenarioIndex - 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,12 +206,12 @@ class CombatTrainingPage extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('进度: ${session.currentScenarioIndex}/${session.scenarios.length}'),
+            Text('进度: ${currentIndex + 1}/${session.scenarios.length}'),
             Text('正确率: ${(session.getAccuracy() * 100).toStringAsFixed(0)}%'),
           ],
         ),
         const SizedBox(height: 8),
-        LinearProgressIndicator(value: progress),
+        LinearProgressIndicator(value: progress.clamp(0.0, 1.0)),
       ],
     );
   }
@@ -117,13 +223,13 @@ class CombatTrainingPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.info_outline, size: 20),
-                const SizedBox(width: 8),
+                Icon(Icons.info_outline, size: 20),
+                SizedBox(width: 8),
                 Text(
                   '场景背景',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -149,11 +255,11 @@ class CombatTrainingPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.chat_bubble_outline, color: Colors.blue),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.chat_bubble_outline, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
                   '她说：',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -241,7 +347,9 @@ class CombatTrainingPage extends StatelessWidget {
                 height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected || hasAnswered && option.isCorrect ? Colors.blue : Colors.grey.shade300,
+                  color: isSelected || (hasAnswered && option.isCorrect)
+                      ? (option.isCorrect ? Colors.green : Colors.red)
+                      : Colors.grey.shade300,
                 ),
                 child: Center(
                   child: icon != null
@@ -368,11 +476,21 @@ class CombatTrainingPage extends StatelessWidget {
       case 'anti_routine':
         return '反套路专项';
       case 'crisis_handling':
-        return '危机处理专项';
+      case 'workplace_crisis':
+        return '职场高危';
       case 'high_difficulty':
-        return '高难度挑战';
+      case 'social_crisis':
+        return '聚会冷场处理';
       default:
         return '实战训练';
     }
+  }
+
+  @override
+  void dispose() {
+    if (_isInitialized && _error == null) {
+      _controller.dispose();
+    }
+    super.dispose();
   }
 }
