@@ -1,4 +1,4 @@
-// lib/shared/services/storage_service.dart (完整版)
+// lib/shared/services/storage_service.dart (临时版本 - 先解决编译问题)
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -7,6 +7,7 @@ import '../../core/models/conversation_model.dart';
 import '../../core/models/analysis_model.dart';
 import '../../core/models/companion_model.dart';
 
+/// 🔄 临时存储服务 - 先让项目运行起来，解决内存问题
 class StorageService {
   static SharedPreferences? _prefs;
 
@@ -20,6 +21,7 @@ class StorageService {
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    print('✅ 临时存储服务初始化完成');
   }
 
   static Future<void> _ensureInitialized() async {
@@ -61,14 +63,20 @@ class StorageService {
       final userData = json.decode(userJson);
       return UserModel.fromJson(userData);
     } catch (e) {
+      print('用户数据解析失败: $e');
       return null;
     }
   }
 
   static Future<bool> saveCurrentUser(UserModel user) async {
     await _ensureInitialized();
-    final userJson = json.encode(user.toJson());
-    return await _prefs!.setString(_currentUserKey, userJson);
+    try {
+      final userJson = json.encode(user.toJson());
+      return await _prefs!.setString(_currentUserKey, userJson);
+    } catch (e) {
+      print('保存用户数据失败: $e');
+      return false;
+    }
   }
 
   static Future<bool> updateCurrentUser(UserModel user) async {
@@ -80,7 +88,7 @@ class StorageService {
     return await _prefs!.remove(_currentUserKey);
   }
 
-  // ========== 对话相关 ==========
+  // ========== 🔥 简化的对话相关方法 - 减少内存占用 ==========
 
   static Future<List<ConversationModel>> getAllConversations() async {
     await _ensureInitialized();
@@ -93,6 +101,7 @@ class StorageService {
           .map((data) => ConversationModel.fromJson(data))
           .toList();
     } catch (e) {
+      print('对话数据解析失败: $e');
       return [];
     }
   }
@@ -102,20 +111,33 @@ class StorageService {
     return allConversations.where((conv) => conv.userId == userId).toList();
   }
 
+  // 🔥 优化：只保存必要的对话数据
   static Future<bool> saveConversation(ConversationModel conversation) async {
-    final conversations = await getAllConversations();
+    try {
+      final conversations = await getAllConversations();
 
-    // 查找并更新已存在的对话，或添加新对话
-    final index = conversations.indexWhere((conv) => conv.id == conversation.id);
-    if (index >= 0) {
-      conversations[index] = conversation;
-    } else {
-      conversations.add(conversation);
+      // 限制对话数量，防止数据过大
+      const maxConversations = 50;
+
+      final index = conversations.indexWhere((conv) => conv.id == conversation.id);
+      if (index >= 0) {
+        conversations[index] = conversation;
+      } else {
+        conversations.add(conversation);
+        // 如果超过限制，删除最旧的对话
+        if (conversations.length > maxConversations) {
+          conversations.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          conversations.removeRange(0, conversations.length - maxConversations);
+        }
+      }
+
+      await _ensureInitialized();
+      final conversationsJson = json.encode(conversations.map((conv) => conv.toJson()).toList());
+      return await _prefs!.setString(_conversationsKey, conversationsJson);
+    } catch (e) {
+      print('保存对话失败: $e');
+      return false;
     }
-
-    await _ensureInitialized();
-    final conversationsJson = json.encode(conversations.map((conv) => conv.toJson()).toList());
-    return await _prefs!.setString(_conversationsKey, conversationsJson);
   }
 
   static Future<ConversationModel?> getConversation(String conversationId) async {
@@ -128,15 +150,20 @@ class StorageService {
   }
 
   static Future<bool> deleteConversation(String conversationId) async {
-    final conversations = await getAllConversations();
-    conversations.removeWhere((conv) => conv.id == conversationId);
+    try {
+      final conversations = await getAllConversations();
+      conversations.removeWhere((conv) => conv.id == conversationId);
 
-    await _ensureInitialized();
-    final conversationsJson = json.encode(conversations.map((conv) => conv.toJson()).toList());
-    return await _prefs!.setString(_conversationsKey, conversationsJson);
+      await _ensureInitialized();
+      final conversationsJson = json.encode(conversations.map((conv) => conv.toJson()).toList());
+      return await _prefs!.setString(_conversationsKey, conversationsJson);
+    } catch (e) {
+      print('删除对话失败: $e');
+      return false;
+    }
   }
 
-  // ========== 分析报告相关 ==========
+  // ========== 分析报告相关（简化） ==========
 
   static Future<List<AnalysisReport>> getAllAnalysisReports() async {
     await _ensureInitialized();
@@ -149,29 +176,41 @@ class StorageService {
           .map((data) => AnalysisReport.fromJson(data))
           .toList();
     } catch (e) {
+      print('分析报告解析失败: $e');
       return [];
+    }
+  }
+
+  static Future<bool> saveAnalysisReport(AnalysisReport report) async {
+    try {
+      final reports = await getAllAnalysisReports();
+
+      // 限制报告数量
+      const maxReports = 30;
+
+      final index = reports.indexWhere((r) => r.id == report.id);
+      if (index >= 0) {
+        reports[index] = report;
+      } else {
+        reports.add(report);
+        if (reports.length > maxReports) {
+          reports.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          reports.removeRange(0, reports.length - maxReports);
+        }
+      }
+
+      await _ensureInitialized();
+      final reportsJson = json.encode(reports.map((report) => report.toJson()).toList());
+      return await _prefs!.setString(_analysisReportsKey, reportsJson);
+    } catch (e) {
+      print('保存分析报告失败: $e');
+      return false;
     }
   }
 
   static Future<List<AnalysisReport>> getUserAnalysisReports(String userId) async {
     final allReports = await getAllAnalysisReports();
     return allReports.where((report) => report.userId == userId).toList();
-  }
-
-  static Future<bool> saveAnalysisReport(AnalysisReport report) async {
-    final reports = await getAllAnalysisReports();
-
-    // 查找并更新已存在的报告，或添加新报告
-    final index = reports.indexWhere((r) => r.id == report.id);
-    if (index >= 0) {
-      reports[index] = report;
-    } else {
-      reports.add(report);
-    }
-
-    await _ensureInitialized();
-    final reportsJson = json.encode(reports.map((report) => report.toJson()).toList());
-    return await _prefs!.setString(_analysisReportsKey, reportsJson);
   }
 
   static Future<AnalysisReport?> getAnalysisReport(String reportId) async {
@@ -192,16 +231,7 @@ class StorageService {
     }
   }
 
-  static Future<bool> deleteAnalysisReport(String reportId) async {
-    final reports = await getAllAnalysisReports();
-    reports.removeWhere((report) => report.id == reportId);
-
-    await _ensureInitialized();
-    final reportsJson = json.encode(reports.map((report) => report.toJson()).toList());
-    return await _prefs!.setString(_analysisReportsKey, reportsJson);
-  }
-
-  // ========== AI伴侣相关 ==========
+  // ========== AI伴侣相关（简化） ==========
 
   static Future<List<CompanionModel>> getCompanions() async {
     await _ensureInitialized();
@@ -214,30 +244,36 @@ class StorageService {
           .map((data) => CompanionModel.fromJson(data))
           .toList();
     } catch (e) {
+      print('伴侣数据解析失败: $e');
       return [];
     }
   }
 
-  static Future<List<CompanionModel>> getUserCompanions(String userId) async {
-    final allCompanions = await getCompanions();
-    // 简化版本：返回所有伴侣（实际应用中可能需要根据用户ID过滤）
-    return allCompanions;
-  }
-
   static Future<bool> saveCompanion(CompanionModel companion) async {
-    final companions = await getCompanions();
+    try {
+      final companions = await getCompanions();
 
-    // 查找并更新已存在的伴侣，或添加新伴侣
-    final index = companions.indexWhere((comp) => comp.id == companion.id);
-    if (index >= 0) {
-      companions[index] = companion;
-    } else {
-      companions.add(companion);
+      // 限制伴侣数量
+      const maxCompanions = 10;
+
+      final index = companions.indexWhere((comp) => comp.id == companion.id);
+      if (index >= 0) {
+        companions[index] = companion;
+      } else {
+        companions.add(companion);
+        if (companions.length > maxCompanions) {
+          companions.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          companions.removeRange(0, companions.length - maxCompanions);
+        }
+      }
+
+      await _ensureInitialized();
+      final companionsJson = json.encode(companions.map((comp) => comp.toJson()).toList());
+      return await _prefs!.setString(_companionsKey, companionsJson);
+    } catch (e) {
+      print('保存伴侣失败: $e');
+      return false;
     }
-
-    await _ensureInitialized();
-    final companionsJson = json.encode(companions.map((comp) => comp.toJson()).toList());
-    return await _prefs!.setString(_companionsKey, companionsJson);
   }
 
   static Future<CompanionModel?> getCompanion(String companionId) async {
@@ -249,16 +285,7 @@ class StorageService {
     }
   }
 
-  static Future<bool> deleteCompanion(String companionId) async {
-    final companions = await getCompanions();
-    companions.removeWhere((comp) => comp.id == companionId);
-
-    await _ensureInitialized();
-    final companionsJson = json.encode(companions.map((comp) => comp.toJson()).toList());
-    return await _prefs!.setString(_companionsKey, companionsJson);
-  }
-
-  // ========== 通用数据存储方法（用于伴侣记忆服务等） ==========
+  // ========== 通用数据存储方法 ==========
 
   static Future<void> saveData(String key, dynamic data) async {
     await _ensureInitialized();
@@ -278,11 +305,6 @@ class StorageService {
     }
   }
 
-  static Future<bool> remove(String key) async {
-    await _ensureInitialized();
-    return await _prefs!.remove(key);
-  }
-
   static Future<void> setString(String key, String value) async {
     await _ensureInitialized();
     await _prefs!.setString(key, value);
@@ -293,41 +315,10 @@ class StorageService {
     return _prefs!.getString(key);
   }
 
-  static Future<void> setStringList(String key, List<String> value) async {
-    await _ensureInitialized();
-    await _prefs!.setStringList(key, value);
-  }
-
-  static Future<List<String>?> getStringList(String key) async {
-    await _ensureInitialized();
-    return _prefs!.getStringList(key);
-  }
-
   // ========== 清理方法 ==========
 
   static Future<bool> clearAllData() async {
     await _ensureInitialized();
     return await _prefs!.clear();
-  }
-
-  static Future<bool> clearUserData(String userId) async {
-    // 清理指定用户的所有数据
-    final conversations = await getAllConversations();
-    final reports = await getAllAnalysisReports();
-
-    // 过滤掉该用户的数据
-    final filteredConversations = conversations.where((conv) => conv.userId != userId).toList();
-    final filteredReports = reports.where((report) => report.userId != userId).toList();
-
-    await _ensureInitialized();
-
-    // 保存过滤后的数据
-    final conversationsJson = json.encode(filteredConversations.map((conv) => conv.toJson()).toList());
-    final reportsJson = json.encode(filteredReports.map((report) => report.toJson()).toList());
-
-    final success1 = await _prefs!.setString(_conversationsKey, conversationsJson);
-    final success2 = await _prefs!.setString(_analysisReportsKey, reportsJson);
-
-    return success1 && success2;
   }
 }
