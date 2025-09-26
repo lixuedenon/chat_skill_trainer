@@ -1,8 +1,9 @@
-// lib/shared/services/notification_service.dart
+// lib/shared/services/notification_service.dart (修复版 - 迁移到HiveService)
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'storage_service.dart';
+import 'dart:convert';
+import 'hive_service.dart';  // 🔥 替代 StorageService
 
 /// 通知服务
 class NotificationService {
@@ -45,7 +46,13 @@ class NotificationService {
   /// 通知监听器
   void _notifyListeners() {
     for (final listener in _listeners) {
-      listener();
+      try {
+        listener();
+      } catch (e) {
+        if (kDebugMode) {
+          print('通知监听器执行失败: $e');
+        }
+      }
     }
   }
 
@@ -87,7 +94,7 @@ class NotificationService {
 
     // 在开发模式下打印通知
     if (kDebugMode) {
-      print('通知: $title - $content');
+      print('📢 通知: $title - $content');
     }
   }
 
@@ -192,6 +199,40 @@ class NotificationService {
     );
   }
 
+  /// 显示积分变化通知
+  Future<void> showCreditsChangeNotification({
+    required int change,
+    required int newTotal,
+    String? reason,
+  }) async {
+    String title;
+    String content;
+
+    if (change > 0) {
+      title = '积分增加';
+      content = '获得 +$change 积分';
+    } else {
+      title = '积分消耗';
+      content = '消耗 ${change.abs()} 积分';
+    }
+
+    if (reason != null) {
+      content += '，$reason';
+    }
+    content += '，当前余额：$newTotal';
+
+    await showNotification(
+      title: title,
+      content: content,
+      type: change > 0 ? NotificationType.success : NotificationType.info,
+      data: {
+        'change': change,
+        'newTotal': newTotal,
+        'reason': reason,
+      },
+    );
+  }
+
   /// 标记通知为已读
   Future<void> markAsRead(String notificationId) async {
     final index = _notifications.indexWhere((n) => n.id == notificationId);
@@ -268,6 +309,24 @@ class NotificationService {
     );
   }
 
+  /// 获取通知统计信息
+  Map<String, dynamic> getNotificationStats() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final thisWeek = now.subtract(Duration(days: now.weekday - 1));
+
+    return {
+      'total': _notifications.length,
+      'unread': unreadCount,
+      'today': _notifications.where((n) => n.createdAt.isAfter(today)).length,
+      'thisWeek': _notifications.where((n) => n.createdAt.isAfter(thisWeek)).length,
+      'byType': {
+        for (final type in NotificationType.values)
+          type.name: _notifications.where((n) => n.type == type).length,
+      },
+    };
+  }
+
   /// 显示应用内通知横幅
   static void showInAppNotification(
     BuildContext context, {
@@ -314,18 +373,26 @@ class NotificationService {
 
   Future<void> _loadNotifications() async {
     try {
-      final data = await StorageService.getStringList(_notificationsKey);
+      print('🔄 加载通知数据...');
+
+      // 🔥 使用HiveService获取通知数据
+      final data = HiveService.getStringList(_notificationsKey);
       if (data != null) {
         _notifications = data
-            .map((json) => AppNotification.fromJson(json))
+            .map((jsonStr) => AppNotification.fromJson(jsonStr))
+            .where((notification) => notification.id.isNotEmpty) // 过滤无效通知
             .toList();
 
         // 清理过期通知
         _cleanExpiredNotifications();
+
+        print('✅ 成功加载 ${_notifications.length} 条通知');
+      } else {
+        print('ℹ️ 未找到已保存的通知数据');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('加载通知失败: $e');
+        print('❌ 加载通知失败: $e');
       }
       _notifications = [];
     }
@@ -333,24 +400,36 @@ class NotificationService {
 
   Future<void> _saveNotifications() async {
     try {
+      // 🔥 使用HiveService保存通知数据
       final data = _notifications.map((n) => n.toJson()).toList();
-      await StorageService.setStringList(_notificationsKey, data);
+      await HiveService.setStringList(_notificationsKey, data);
+
+      if (kDebugMode) {
+        print('✅ 通知数据保存成功，共 ${_notifications.length} 条');
+      }
     } catch (e) {
       if (kDebugMode) {
-        print('保存通知失败: $e');
+        print('❌ 保存通知失败: $e');
       }
     }
   }
 
   Future<void> _loadSettings() async {
     try {
-      final data = await StorageService.getString(_settingsKey);
+      print('🔄 加载通知设置...');
+
+      // 🔥 使用HiveService获取设置数据
+      final data = HiveService.getString(_settingsKey);
       if (data != null) {
         _settings = NotificationSettings.fromJson(data);
+        print('✅ 通知设置加载成功');
+      } else {
+        print('ℹ️ 使用默认通知设置');
+        _settings = const NotificationSettings();
       }
     } catch (e) {
       if (kDebugMode) {
-        print('加载通知设置失败: $e');
+        print('❌ 加载通知设置失败: $e');
       }
       _settings = const NotificationSettings();
     }
@@ -358,19 +437,30 @@ class NotificationService {
 
   Future<void> _saveSettings() async {
     try {
-      await StorageService.setString(_settingsKey, _settings.toJson());
+      // 🔥 使用HiveService保存设置数据
+      await HiveService.setString(_settingsKey, _settings.toJson());
+
+      if (kDebugMode) {
+        print('✅ 通知设置保存成功');
+      }
     } catch (e) {
       if (kDebugMode) {
-        print('保存通知设置失败: $e');
+        print('❌ 保存通知设置失败: $e');
       }
     }
   }
 
   void _cleanExpiredNotifications() {
     final now = DateTime.now();
+    final originalCount = _notifications.length;
     _notifications.removeWhere((n) =>
       n.expireAt != null && n.expireAt!.isBefore(now)
     );
+
+    final removedCount = originalCount - _notifications.length;
+    if (removedCount > 0 && kDebugMode) {
+      print('🗑️ 清理了 $removedCount 条过期通知');
+    }
   }
 
   bool _isTypeEnabled(NotificationType type) {
@@ -440,6 +530,82 @@ class NotificationService {
         return Icons.info;
     }
   }
+
+  // ============ 🔥 新增便民方法 ============
+
+  /// 批量标记通知为已读（按类型）
+  Future<void> markTypeAsRead(NotificationType type) async {
+    bool hasChanges = false;
+    for (int i = 0; i < _notifications.length; i++) {
+      if (_notifications[i].type == type && !_notifications[i].isRead) {
+        _notifications[i] = _notifications[i].copyWith(isRead: true);
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      await _saveNotifications();
+      _notifyListeners();
+    }
+  }
+
+  /// 清理指定天数前的通知
+  Future<void> cleanOldNotifications(int daysAgo) async {
+    final cutoffDate = DateTime.now().subtract(Duration(days: daysAgo));
+    final originalCount = _notifications.length;
+
+    _notifications.removeWhere((n) => n.createdAt.isBefore(cutoffDate));
+
+    final removedCount = originalCount - _notifications.length;
+    if (removedCount > 0) {
+      await _saveNotifications();
+      _notifyListeners();
+
+      if (kDebugMode) {
+        print('🗑️ 清理了 $removedCount 条 $daysAgo 天前的通知');
+      }
+    }
+  }
+
+  /// 导出通知数据
+  Future<Map<String, dynamic>> exportNotifications() async {
+    return {
+      'notifications': _notifications.map((n) => n.toJsonMap()).toList(),
+      'settings': _settings.toJsonMap(),
+      'exportedAt': DateTime.now().toIso8601String(),
+      'version': '1.0.0',
+    };
+  }
+
+  /// 导入通知数据
+  Future<bool> importNotifications(Map<String, dynamic> data) async {
+    try {
+      // 导入通知
+      if (data['notifications'] != null) {
+        final importedNotifications = (data['notifications'] as List)
+            .map((item) => AppNotification.fromJsonMap(item))
+            .toList();
+
+        _notifications = importedNotifications;
+      }
+
+      // 导入设置
+      if (data['settings'] != null) {
+        _settings = NotificationSettings.fromJsonMap(data['settings']);
+      }
+
+      // 保存
+      await _saveNotifications();
+      await _saveSettings();
+      _notifyListeners();
+
+      print('✅ 通知数据导入成功');
+      return true;
+    } catch (e) {
+      print('❌ 通知数据导入失败: $e');
+      return false;
+    }
+  }
 }
 
 /// 通知类型枚举
@@ -485,13 +651,26 @@ class AppNotification {
     this.isRead = false,
   });
 
-  /// 从JSON创建通知
+  /// 从JSON字符串创建通知
   factory AppNotification.fromJson(String jsonStr) {
-    final json = Map<String, dynamic>.from(
-      // 这里应该解析JSON字符串，暂时简化处理
-      {'id': '', 'title': '', 'content': '', 'type': 'info', 'data': {}, 'createdAt': DateTime.now().toIso8601String()},
-    );
+    try {
+      final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+      return AppNotification.fromJsonMap(json);
+    } catch (e) {
+      // 返回一个空的通知，标记为无效
+      return AppNotification(
+        id: '',
+        title: '',
+        content: '',
+        type: NotificationType.info,
+        data: const {},
+        createdAt: DateTime.now(),
+      );
+    }
+  }
 
+  /// 从JSON Map创建通知
+  factory AppNotification.fromJsonMap(Map<String, dynamic> json) {
     return AppNotification(
       id: json['id'] ?? '',
       title: json['title'] ?? '',
@@ -507,9 +686,14 @@ class AppNotification {
     );
   }
 
-  /// 转换为JSON
+  /// 转换为JSON字符串
   String toJson() {
-    final json = {
+    return jsonEncode(toJsonMap());
+  }
+
+  /// 转换为JSON Map
+  Map<String, dynamic> toJsonMap() {
+    return {
       'id': id,
       'title': title,
       'content': content,
@@ -519,8 +703,6 @@ class AppNotification {
       'expireAt': expireAt?.toIso8601String(),
       'isRead': isRead,
     };
-    // 这里应该序列化为JSON字符串，暂时简化处理
-    return json.toString();
   }
 
   /// 复制通知并修改部分属性
@@ -596,15 +778,40 @@ class NotificationSettings {
     this.quietEndTime = '08:00',
   });
 
-  /// 从JSON创建设置
+  /// 从JSON字符串创建设置
   factory NotificationSettings.fromJson(String jsonStr) {
-    // 这里应该解析JSON字符串，暂时简化处理
-    return const NotificationSettings();
+    try {
+      final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+      return NotificationSettings.fromJsonMap(json);
+    } catch (e) {
+      return const NotificationSettings();
+    }
   }
 
-  /// 转换为JSON
+  /// 从JSON Map创建设置
+  factory NotificationSettings.fromJsonMap(Map<String, dynamic> json) {
+    return NotificationSettings(
+      enabled: json['enabled'] ?? true,
+      enableSystem: json['enableSystem'] ?? true,
+      enableTraining: json['enableTraining'] ?? true,
+      enableCompanion: json['enableCompanion'] ?? true,
+      enableAchievement: json['enableAchievement'] ?? true,
+      enableReminder: json['enableReminder'] ?? true,
+      enableSound: json['enableSound'] ?? true,
+      enableVibration: json['enableVibration'] ?? true,
+      quietStartTime: json['quietStartTime'] ?? '22:00',
+      quietEndTime: json['quietEndTime'] ?? '08:00',
+    );
+  }
+
+  /// 转换为JSON字符串
   String toJson() {
-    final json = {
+    return jsonEncode(toJsonMap());
+  }
+
+  /// 转换为JSON Map
+  Map<String, dynamic> toJsonMap() {
+    return {
       'enabled': enabled,
       'enableSystem': enableSystem,
       'enableTraining': enableTraining,
@@ -616,8 +823,6 @@ class NotificationSettings {
       'quietStartTime': quietStartTime,
       'quietEndTime': quietEndTime,
     };
-    // 这里应该序列化为JSON字符串，暂时简化处理
-    return json.toString();
   }
 
   /// 复制设置并修改部分属性

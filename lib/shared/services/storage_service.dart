@@ -1,4 +1,4 @@
-// lib/shared/services/storage_service.dart (临时版本 - 先解决编译问题)
+// lib/shared/services/storage_service.dart (修复版 - 添加缺失的导入)
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -7,7 +7,10 @@ import '../../core/models/conversation_model.dart';
 import '../../core/models/analysis_model.dart';
 import '../../core/models/companion_model.dart';
 
-/// 🔄 临时存储服务 - 先让项目运行起来，解决内存问题
+/// 🔄 临时存储服务 - 解决编译问题，逐步被HiveService替代
+///
+/// ⚠️ 注意：这个服务是过渡期使用，最终会被废弃
+/// 新功能请使用 HiveService
 class StorageService {
   static SharedPreferences? _prefs;
 
@@ -88,7 +91,7 @@ class StorageService {
     return await _prefs!.remove(_currentUserKey);
   }
 
-  // ========== 🔥 简化的对话相关方法 - 减少内存占用 ==========
+  // ========== 对话相关方法 ==========
 
   static Future<List<ConversationModel>> getAllConversations() async {
     await _ensureInitialized();
@@ -111,7 +114,6 @@ class StorageService {
     return allConversations.where((conv) => conv.userId == userId).toList();
   }
 
-  // 🔥 优化：只保存必要的对话数据
   static Future<bool> saveConversation(ConversationModel conversation) async {
     try {
       final conversations = await getAllConversations();
@@ -163,7 +165,7 @@ class StorageService {
     }
   }
 
-  // ========== 分析报告相关（简化） ==========
+  // ========== 分析报告相关 ==========
 
   static Future<List<AnalysisReport>> getAllAnalysisReports() async {
     await _ensureInitialized();
@@ -231,7 +233,7 @@ class StorageService {
     }
   }
 
-  // ========== AI伴侣相关（简化） ==========
+  // ========== AI伴侣相关 ==========
 
   static Future<List<CompanionModel>> getCompanions() async {
     await _ensureInitialized();
@@ -285,6 +287,29 @@ class StorageService {
     }
   }
 
+  /// 🔥 添加缺失的 deleteCompanion 方法
+  static Future<bool> deleteCompanion(String companionId) async {
+    try {
+      final companions = await getCompanions();
+      final originalLength = companions.length;
+      companions.removeWhere((comp) => comp.id == companionId);
+
+      if (companions.length != originalLength) {
+        await _ensureInitialized();
+        final companionsJson = json.encode(companions.map((comp) => comp.toJson()).toList());
+        await _prefs!.setString(_companionsKey, companionsJson);
+        print('✅ 删除伴侣成功: $companionId');
+        return true;
+      } else {
+        print('⚠️ 未找到要删除的伴侣: $companionId');
+        return false;
+      }
+    } catch (e) {
+      print('❌ 删除伴侣失败: $e');
+      return false;
+    }
+  }
+
   // ========== 通用数据存储方法 ==========
 
   static Future<void> saveData(String key, dynamic data) async {
@@ -315,10 +340,43 @@ class StorageService {
     return _prefs!.getString(key);
   }
 
+  static Future<void> setStringList(String key, List<String> value) async {
+    await _ensureInitialized();
+    await _prefs!.setStringList(key, value);
+  }
+
+  static Future<List<String>?> getStringList(String key) async {
+    await _ensureInitialized();
+    return _prefs!.getStringList(key);
+  }
+
   // ========== 清理方法 ==========
 
   static Future<bool> clearAllData() async {
     await _ensureInitialized();
     return await _prefs!.clear();
+  }
+
+  /// 🔥 获取存储统计信息
+  static Future<Map<String, dynamic>> getStorageStats() async {
+    try {
+      await _ensureInitialized();
+
+      final conversations = await getAllConversations();
+      final reports = await getAllAnalysisReports();
+      final companions = await getCompanions();
+      final user = await getCurrentUser();
+
+      return {
+        'userExists': user != null,
+        'conversationsCount': conversations.length,
+        'reportsCount': reports.length,
+        'companionsCount': companions.length,
+        'storageService': 'SharedPreferences (临时)',
+        'migrationStatus': '等待迁移到HiveService',
+      };
+    } catch (e) {
+      return {'error': e.toString()};
+    }
   }
 }

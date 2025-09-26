@@ -1,11 +1,11 @@
-// lib/features/ai_companion/companion_controller.dart (恢复延迟回调版)
+// lib/features/ai_companion/companion_controller.dart (修复版 - 迁移到HiveService)
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import '../../core/models/companion_model.dart';
 import '../../core/models/conversation_model.dart';
 import '../../core/models/user_model.dart';
-import '../../shared/services/storage_service.dart';
+import '../../shared/services/hive_service.dart';  // 🔥 替代 StorageService
 import '../ai_companion/companion_memory_service.dart';
 import '../ai_companion/companion_story_generator.dart';
 
@@ -18,6 +18,7 @@ class CompanionController extends ChangeNotifier {
   bool _isTyping = false;
   String _statusMessage = '';
   bool _showEndingSequence = false;
+  bool _disposed = false;  // 🔥 添加销毁标志
 
   CompanionController({required this.user});
 
@@ -34,42 +35,59 @@ class CompanionController extends ChangeNotifier {
   bool get canSendMessage => !_isTyping && _currentCompanion != null;
 
   Future<void> loadExistingCompanions() async {
+    if (_disposed) return;
+
     _isLoading = true;
     print('🟡 即将调用notifyListeners - loadExistingCompanions方法开始');
-    notifyListeners();
+    _safeNotifyListeners();
     print('🟢 notifyListeners调用完成 - loadExistingCompanions方法开始');
 
     try {
-      _existingCompanions = await StorageService.getCompanions();
+      // 🔥 使用HiveService替代StorageService
+      _existingCompanions = HiveService.getCompanions();
+      print('✅ 成功加载 ${_existingCompanions.length} 个AI伴侣');
     } catch (e) {
+      print('❌ 加载伴侣列表失败: $e');
       _statusMessage = '加载伴侣列表失败: ${e.toString()}';
+      _existingCompanions = []; // 确保有默认值
     } finally {
-      _isLoading = false;
-      print('🟡 即将调用notifyListeners - loadExistingCompanions方法结束');
-      notifyListeners();
-      print('🟢 notifyListeners调用完成 - loadExistingCompanions方法结束');
+      if (!_disposed) {
+        _isLoading = false;
+        print('🟡 即将调用notifyListeners - loadExistingCompanions方法结束');
+        _safeNotifyListeners();
+        print('🟢 notifyListeners调用完成 - loadExistingCompanions方法结束');
+      }
     }
   }
 
   Future<void> initializeCompanion(CompanionModel companion) async {
+    if (_disposed) return;
+
     _isLoading = true;
     _currentCompanion = companion;
     print('🟡 即将调用notifyListeners - initializeCompanion方法开始');
-    notifyListeners();
+    _safeNotifyListeners();
     print('🟢 notifyListeners调用完成 - initializeCompanion方法开始');
 
     try {
-      _messages = await CompanionMemoryService.loadMessages(companion.id);
+      // 🔥 使用HiveService加载消息
+      _messages = await HiveService.loadCompanionMessages(companion.id);
+      print('✅ 成功加载 ${_messages.length} 条消息');
+
       if (_messages.isEmpty) {
         await _addOpeningMessage();
       }
     } catch (e) {
+      print('❌ 初始化伴侣失败: $e');
       _statusMessage = '初始化失败: ${e.toString()}';
+      _messages = []; // 确保有默认值
     } finally {
-      _isLoading = false;
-      print('🟡 即将调用notifyListeners - initializeCompanion方法结束');
-      notifyListeners();
-      print('🟢 notifyListeners调用完成 - initializeCompanion方法结束');
+      if (!_disposed) {
+        _isLoading = false;
+        print('🟡 即将调用notifyListeners - initializeCompanion方法结束');
+        _safeNotifyListeners();
+        print('🟢 notifyListeners调用完成 - initializeCompanion方法结束');
+      }
     }
   }
 
@@ -78,6 +96,8 @@ class CompanionController extends ChangeNotifier {
     CompanionType? type,
     CompanionModel? companion,
   }) async {
+    if (_disposed) return;
+
     try {
       CompanionModel newCompanion;
 
@@ -95,49 +115,63 @@ class CompanionController extends ChangeNotifier {
         throw Exception('必须提供伴侣对象或名称和类型');
       }
 
-      await StorageService.saveCompanion(newCompanion);
+      // 🔥 使用HiveService保存伴侣
+      await HiveService.saveCompanion(newCompanion);
+      print('✅ 成功保存新伴侣: ${newCompanion.name}');
+
       _existingCompanions.insert(0, newCompanion);
       _currentCompanion = newCompanion;
       _messages = [];
       await _addOpeningMessage();
 
       print('🟡 即将调用notifyListeners - createCompanion方法（延迟）');
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
-        print('🟢 notifyListeners调用完成 - createCompanion方法（延迟）');
-      });
+      if (!_disposed) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _safeNotifyListeners();
+          print('🟢 notifyListeners调用完成 - createCompanion方法（延迟）');
+        });
+      }
     } catch (e) {
+      print('❌ 创建伴侣失败: $e');
       throw Exception('创建伴侣失败: ${e.toString()}');
     }
   }
 
   Future<void> loadCompanion(String companionId) async {
+    if (_disposed) return;
+
     try {
-      final companionData = await StorageService.getCompanion(companionId);
+      // 🔥 使用HiveService获取伴侣数据
+      final companionData = HiveService.getCompanion(companionId);
       if (companionData == null) {
-        throw Exception('伴侣数据不存在');
+        throw Exception('伴侣数据不存在: $companionId');
       }
 
       _currentCompanion = companionData;
-      _messages = await CompanionMemoryService.loadMessages(companionId);
+      // 🔥 使用HiveService加载消息
+      _messages = await HiveService.loadCompanionMessages(companionId);
+      print('✅ 成功加载伴侣: ${companionData.name}, ${_messages.length}条消息');
 
       print('🟡 即将调用notifyListeners - loadCompanion方法（延迟）');
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
-        print('🟢 notifyListeners调用完成 - loadCompanion方法（延迟）');
-      });
+      if (!_disposed) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _safeNotifyListeners();
+          print('🟢 notifyListeners调用完成 - loadCompanion方法（延迟）');
+        });
+      }
     } catch (e) {
+      print('❌ 加载伴侣失败: $e');
       throw Exception('加载伴侣失败: $e');
     }
   }
 
   Future<void> sendMessage(String content) async {
-    if (_currentCompanion == null || _isTyping) return;
+    if (_currentCompanion == null || _isTyping || _disposed) return;
 
     try {
       _isTyping = true;
       print('🟡 即将调用notifyListeners - sendMessage方法开始');
-      notifyListeners();
+      _safeNotifyListeners();
       print('🟢 notifyListeners调用完成 - sendMessage方法开始');
 
       final userMessage = MessageModel(
@@ -166,12 +200,15 @@ class CompanionController extends ChangeNotifier {
       await _saveState();
 
     } catch (e) {
+      print('❌ 发送消息失败: $e');
       _statusMessage = '发送消息失败: $e';
     } finally {
-      _isTyping = false;
-      print('🟡 即将调用notifyListeners - sendMessage方法结束');
-      notifyListeners();
-      print('🟢 notifyListeners调用完成 - sendMessage方法结束');
+      if (!_disposed) {
+        _isTyping = false;
+        print('🟡 即将调用notifyListeners - sendMessage方法结束');
+        _safeNotifyListeners();
+        print('🟢 notifyListeners调用完成 - sendMessage方法结束');
+      }
     }
   }
 
@@ -208,10 +245,10 @@ class CompanionController extends ChangeNotifier {
   }
 
   Future<void> completeEnding() async {
-    if (_currentCompanion == null) return;
+    if (_currentCompanion == null || _disposed) return;
     await _saveState();
     _statusMessage = '${_currentCompanion!.name}已经离开，但回忆永远不会消失...';
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   Future<MessageModel> _generateAIResponse(String userInput) async {
@@ -328,18 +365,25 @@ class CompanionController extends ChangeNotifier {
   Future<void> _saveState() async {
     if (_currentCompanion == null) return;
     await _saveCompanion();
-    await CompanionMemoryService.saveMessages(_currentCompanion!.id, _messages);
+    // 🔥 使用HiveService保存消息
+    await HiveService.saveCompanionMessages(_currentCompanion!.id, _messages);
   }
 
   Future<void> _saveCompanion() async {
     if (_currentCompanion == null) return;
-    await StorageService.saveCompanion(_currentCompanion!);
+    // 🔥 使用HiveService保存伴侣
+    await HiveService.saveCompanion(_currentCompanion!);
   }
 
   Future<void> deleteCompanion(String companionId) async {
+    if (_disposed) return;
+
     try {
-      await StorageService.deleteCompanion(companionId);
-      await CompanionMemoryService.saveMessages(companionId, []);
+      print('🔄 开始删除伴侣: $companionId');
+
+      // 🔥 使用HiveService删除伴侣和相关消息
+      await HiveService.deleteCompanion(companionId);
+      print('✅ 成功删除伴侣和相关数据');
 
       _existingCompanions.removeWhere((c) => c.id == companionId);
 
@@ -348,8 +392,9 @@ class CompanionController extends ChangeNotifier {
         _messages.clear();
       }
 
-      notifyListeners();
+      _safeNotifyListeners();
     } catch (e) {
+      print('❌ 删除伴侣失败: $e');
       throw Exception('删除伴侣失败: ${e.toString()}');
     }
   }
@@ -396,7 +441,7 @@ class CompanionController extends ChangeNotifier {
   }
 
   Future<void> resetCompanion() async {
-    if (_currentCompanion == null) return;
+    if (_currentCompanion == null || _disposed) return;
 
     final companionType = _currentCompanion!.type;
     final companionName = _currentCompanion!.name;
@@ -405,14 +450,150 @@ class CompanionController extends ChangeNotifier {
   }
 
   void clearError() {
+    if (_disposed) return;
+
     _statusMessage = '';
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
+  /// 🔥 安全的通知监听器方法
+  void _safeNotifyListeners() {
+    if (!_disposed && hasListeners) {
+      notifyListeners();
+    }
+  }
+
+  /// 🔥 重写dispose方法，确保资源释放
   @override
   void dispose() {
-    _saveState();
+    print('🔄 CompanionController 销毁中...');
+    _disposed = true;
+
+    // 保存最终状态
+    if (_currentCompanion != null) {
+      _saveState().catchError((e) {
+        print('❌ 销毁时保存状态失败: $e');
+      });
+    }
+
+    // 清理所有引用
+    _currentCompanion = null;
+    _existingCompanions.clear();
+    _messages.clear();
+    _statusMessage = '';
+    _isLoading = false;
+    _isTyping = false;
+    _showEndingSequence = false;
+
     super.dispose();
+    print('✅ CompanionController 销毁完成');
+  }
+
+  // ========== 🔥 附加的便民方法 ==========
+
+  /// 🔥 获取用户的所有伴侣统计信息
+  Future<Map<String, dynamic>> getCompanionStats() async {
+    if (_disposed) return {};
+
+    try {
+      final companions = HiveService.getCompanions();
+
+      final stats = {
+        'totalCompanions': companions.length,
+        'companionsByType': <String, int>{},
+        'companionsByStage': <String, int>{},
+        'totalMessages': 0,
+        'averageFavorability': 0.0,
+        'companionsNearEnding': 0,
+      };
+
+      if (companions.isNotEmpty) {
+        // 按类型分组
+        for (final companion in companions) {
+          final typeName = companion.typeName;
+          final companionsByType = stats['companionsByType'] as Map<String, int>;
+          companionsByType[typeName] = (companionsByType[typeName] ?? 0) + 1;
+
+          // 按阶段分组
+          final stageName = companion.stageName;
+          final companionsByStage = stats['companionsByStage'] as Map<String, int>;
+          companionsByStage[stageName] = (companionsByStage[stageName] ?? 0) + 1;
+
+          // 统计接近结局的伴侣
+          if (companion.isNearTokenLimit) {
+            stats['companionsNearEnding'] = (stats['companionsNearEnding'] as int) + 1;
+          }
+        }
+
+        // 计算总消息数和平均好感度
+        int totalMessages = 0;
+        int totalFavorability = 0;
+
+        for (final companion in companions) {
+          final messages = await HiveService.loadCompanionMessages(companion.id);
+          totalMessages += messages.length;
+          totalFavorability += companion.favorabilityScore;
+        }
+
+        stats['totalMessages'] = totalMessages;
+        stats['averageFavorability'] = totalFavorability / companions.length;
+      }
+
+      return stats;
+    } catch (e) {
+      print('❌ 获取伴侣统计信息失败: $e');
+      return {};
+    }
+  }
+
+  /// 🔥 批量删除所有伴侣（重置功能）
+  Future<bool> deleteAllCompanions() async {
+    if (_disposed) return false;
+
+    try {
+      print('🔄 开始删除所有伴侣...');
+
+      final companions = List<CompanionModel>.from(_existingCompanions);
+
+      for (final companion in companions) {
+        await HiveService.deleteCompanion(companion.id);
+      }
+
+      _existingCompanions.clear();
+      _currentCompanion = null;
+      _messages.clear();
+
+      _safeNotifyListeners();
+      print('✅ 成功删除所有伴侣');
+      return true;
+
+    } catch (e) {
+      print('❌ 删除所有伴侣失败: $e');
+      return false;
+    }
+  }
+
+  /// 🔥 导出伴侣数据
+  Future<Map<String, dynamic>?> exportCompanionData(String companionId) async {
+    if (_disposed) return null;
+
+    try {
+      final companion = HiveService.getCompanion(companionId);
+      if (companion == null) return null;
+
+      final messages = await HiveService.loadCompanionMessages(companionId);
+
+      return {
+        'companion': companion.toJson(),
+        'messages': messages.map((m) => m.toJson()).toList(),
+        'exportedAt': DateTime.now().toIso8601String(),
+        'version': '1.0.0',
+      };
+
+    } catch (e) {
+      print('❌ 导出伴侣数据失败: $e');
+      return null;
+    }
   }
 }
 
