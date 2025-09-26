@@ -1,4 +1,4 @@
-// lib/core/models/user_model.dart
+// lib/core/models/user_model.dart (完整修复版 - 确保 newUser 方法正确)
 
 /// 用户魅力标签枚举
 enum CharmTag {
@@ -68,6 +68,25 @@ class UserStats {
     required this.highestFavorability,
     required this.characterInteractions,
   });
+
+  /// 🔥 添加 copyWith 方法 - 解决之前的编译错误
+  UserStats copyWith({
+    int? totalConversations,
+    int? successfulConversations,
+    double? averageFavorability,
+    int? totalRounds,
+    int? highestFavorability,
+    Map<String, int>? characterInteractions,
+  }) {
+    return UserStats(
+      totalConversations: totalConversations ?? this.totalConversations,
+      successfulConversations: successfulConversations ?? this.successfulConversations,
+      averageFavorability: averageFavorability ?? this.averageFavorability,
+      totalRounds: totalRounds ?? this.totalRounds,
+      highestFavorability: highestFavorability ?? this.highestFavorability,
+      characterInteractions: characterInteractions ?? this.characterInteractions,
+    );
+  }
 
   /// 从JSON创建用户统计对象
   factory UserStats.fromJson(Map<String, dynamic> json) {
@@ -192,7 +211,7 @@ class UserModel {
     this.conversationHistory = const [],
   });
 
-  /// 创建新用户
+  /// 🔥 创建新用户 - 这是关键的方法！
   factory UserModel.newUser({
     required String id,
     required String username,
@@ -224,6 +243,15 @@ class UserModel {
       preferences: const UserPreferences(),
       isVipUser: false,
       conversationHistory: [],
+    );
+  }
+
+  /// 🔥 额外的便民工厂构造方法
+  factory UserModel.createDummy() {
+    return UserModel.newUser(
+      id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
+      username: 'temp_user',
+      email: 'temp@example.com',
     );
   }
 

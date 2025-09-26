@@ -1,4 +1,4 @@
-// lib/features/ai_companion/pages/companion_selection_page.dart (彻底修复闪烁版)
+// lib/features/ai_companion/pages/companion_selection_page.dart (修复 UserModel.newUser 错误)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,7 +7,7 @@ import '../../../core/models/user_model.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../companion_controller.dart';
 import '../companion_story_generator.dart';
-import 'companion_chat_page.dart'; // 添加导入
+import 'companion_chat_page.dart';
 
 class CompanionSelectionPage extends StatefulWidget {
   const CompanionSelectionPage({Key? key}) : super(key: key);
@@ -31,6 +31,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
   void _initializeController() async {
     print('🔵 [SelectionPage] 开始创建Controller');
     try {
+      // 🔥 修复：使用正确的 UserModel.newUser 构造方法
       _controller = CompanionController(user: _createDummyUser());
       print('🔵 [SelectionPage] Controller创建成功');
       await _loadExistingCompanions();
@@ -378,22 +379,20 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
       await _controller!.createCompanion(companion: companion);
       print('🔵 [SelectionPage] Controller.createCompanion 完成');
 
-      // 关键修改：在跳转前的最后一刻设置加载状态，无延迟
       if (mounted) {
         setState(() {
-          _isCreating = true; // 立即隐藏选择界面
+          _isCreating = true;
         });
 
         print('🔵 [SelectionPage] 准备无动画跳转到聊天页面');
-        // 使用无动画的页面替换，彻底避免闪烁
         Navigator.of(context).pushAndRemoveUntil(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
                 CompanionChatPage(companion: companion),
-            transitionDuration: Duration.zero, // 禁用进入动画
-            reverseTransitionDuration: Duration.zero, // 禁用退出动画
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
           ),
-          (route) => route.isFirst, // 移除到首页为止
+          (route) => route.isFirst,
         );
         print('🔵 [SelectionPage] 无动画页面替换完成');
       }
@@ -531,6 +530,7 @@ class _CompanionSelectionPageState extends State<CompanionSelectionPage> {
     print('🔵 [SelectionPage] 继续伴侣无动画跳转完成');
   }
 
+  /// 🔥 修复：使用正确的 UserModel.newUser 构造方法
   UserModel _createDummyUser() {
     return UserModel.newUser(
       id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',

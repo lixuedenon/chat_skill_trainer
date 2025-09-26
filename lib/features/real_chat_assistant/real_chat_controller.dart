@@ -1,4 +1,4 @@
-// lib/features/real_chat_assistant/real_chat_controller.dart (修复版 - 无需StorageService迁移)
+// lib/features/real_chat_assistant/real_chat_controller.dart (完整修复版)
 
 import 'package:flutter/foundation.dart';
 import '../../core/models/user_model.dart';
@@ -366,6 +366,65 @@ class RealChatController extends ChangeNotifier {
       print('❌ 基于翻译结果生成建议时出错: $e');
     }
 
+    return suggestions;
+  }
+
+  /// 基于雷达分析生成建议
+  List<ChatSuggestion> _generateBasedOnRadar(SocialRadarAnalysis radar) {
+    final suggestions = <ChatSuggestion>[];
+
+    try {
+      for (final opportunity in radar.opportunities) {
+        switch (opportunity.type) {
+          case OpportunityType.show_care:
+            suggestions.add(ChatSuggestion(
+              text: '${opportunity.suggestedResponse}，你还好吗？',
+              type: SuggestionType.caring,
+              confidence: 0.8,
+              explanation: opportunity.explanation,
+            ));
+            break;
+          case OpportunityType.ask_question:
+            suggestions.add(ChatSuggestion(
+              text: opportunity.suggestedResponse,
+              type: SuggestionType.engaging,
+              confidence: 0.75,
+              explanation: opportunity.explanation,
+            ));
+            break;
+          case OpportunityType.share_experience:
+            suggestions.add(ChatSuggestion(
+              text: opportunity.suggestedResponse,
+              type: SuggestionType.sharing,
+              confidence: 0.7,
+              explanation: opportunity.explanation,
+            ));
+            break;
+          case OpportunityType.emotional_support:
+            suggestions.add(ChatSuggestion(
+              text: opportunity.suggestedResponse,
+              type: SuggestionType.supportive,
+              confidence: 0.85,
+              explanation: opportunity.explanation,
+            ));
+            break;
+          case OpportunityType.future_plan:
+            suggestions.add(ChatSuggestion(
+              text: opportunity.suggestedResponse,
+              type: SuggestionType.romantic,
+              confidence: 0.75,
+              explanation: opportunity.explanation,
+            ));
+            break;
+        }
+      }
+    } catch (e) {
+      print('❌ 基于雷达分析生成建议时出错: $e');
+    }
+
+    return suggestions;
+  }
+
   /// 生成通用建议
   List<ChatSuggestion> _generateGenericSuggestions(String message) {
     final suggestions = <ChatSuggestion>[];
@@ -450,7 +509,7 @@ class RealChatController extends ChangeNotifier {
     }
   }
 
-  /// 更新分析历史
+  /// 🔥 更新分析历史 - 修复缺失的方法
   void _updateAnalysisHistory(String message) {
     try {
       final timestamp = DateTime.now().toString().substring(11, 16);
@@ -466,7 +525,7 @@ class RealChatController extends ChangeNotifier {
     }
   }
 
-  /// 辅助方法：获取机会标题
+  /// 🔥 辅助方法：获取机会标题
   String _getOpportunityTitle(OpportunityType type) {
     switch (type) {
       case OpportunityType.show_care:
@@ -482,6 +541,7 @@ class RealChatController extends ChangeNotifier {
     }
   }
 
+  /// 🔥 辅助方法：获取警告标题
   String _getWarningTitle(WarningType type) {
     switch (type) {
       case WarningType.cold_response:
@@ -493,6 +553,7 @@ class RealChatController extends ChangeNotifier {
     }
   }
 
+  /// 🔥 辅助方法：获取信息标题
   String _getInfoTitle(InfoType type) {
     switch (type) {
       case InfoType.time:
@@ -506,6 +567,7 @@ class RealChatController extends ChangeNotifier {
     }
   }
 
+  /// 🔥 辅助方法：获取优先级文本
   String _getPriorityText(OpportunityPriority priority) {
     switch (priority) {
       case OpportunityPriority.high:
@@ -517,6 +579,7 @@ class RealChatController extends ChangeNotifier {
     }
   }
 
+  /// 🔥 辅助方法：获取严重性文本
   String _getSeverityText(WarningSeverity severity) {
     switch (severity) {
       case WarningSeverity.high:
@@ -528,6 +591,7 @@ class RealChatController extends ChangeNotifier {
     }
   }
 
+  /// 🔥 辅助方法：获取重要性文本
   String _getImportanceText(ImportanceLevel importance) {
     switch (importance) {
       case ImportanceLevel.high:
@@ -689,7 +753,7 @@ class RealChatController extends ChangeNotifier {
   }
 }
 
-/// 聊天建议
+/// 🔥 聊天建议类 - 完整定义
 class ChatSuggestion {
   final String text;              // 建议文本
   final SuggestionType type;      // 建议类型
@@ -718,7 +782,7 @@ class ChatSuggestion {
   int get hashCode => text.hashCode;
 }
 
-/// 建议类型
+/// 🔥 建议类型枚举 - 完整定义
 enum SuggestionType {
   caring,         // 关心型
   honest,         // 诚实型
@@ -730,6 +794,7 @@ enum SuggestionType {
   romantic,       // 浪漫型
 }
 
+/// 🔥 建议类型扩展 - 完整定义
 extension SuggestionTypeExtension on SuggestionType {
   String get displayName {
     switch (this) {
@@ -773,59 +838,3 @@ extension SuggestionTypeExtension on SuggestionType {
     }
   }
 }
-
-  /// 基于雷达分析生成建议
-  List<ChatSuggestion> _generateBasedOnRadar(SocialRadarAnalysis radar) {
-    final suggestions = <ChatSuggestion>[];
-
-    try {
-      for (final opportunity in radar.opportunities) {
-        switch (opportunity.type) {
-          case OpportunityType.show_care:
-            suggestions.add(ChatSuggestion(
-              text: '${opportunity.suggestedResponse}，你还好吗？',
-              type: SuggestionType.caring,
-              confidence: 0.8,
-              explanation: opportunity.explanation,
-            ));
-            break;
-          case OpportunityType.ask_question:
-            suggestions.add(ChatSuggestion(
-              text: opportunity.suggestedResponse,
-              type: SuggestionType.engaging,
-              confidence: 0.75,
-              explanation: opportunity.explanation,
-            ));
-            break;
-          case OpportunityType.share_experience:
-            suggestions.add(ChatSuggestion(
-              text: opportunity.suggestedResponse,
-              type: SuggestionType.sharing,
-              confidence: 0.7,
-              explanation: opportunity.explanation,
-            ));
-            break;
-          case OpportunityType.emotional_support:
-            suggestions.add(ChatSuggestion(
-              text: opportunity.suggestedResponse,
-              type: SuggestionType.supportive,
-              confidence: 0.85,
-              explanation: opportunity.explanation,
-            ));
-            break;
-          case OpportunityType.future_plan:
-            suggestions.add(ChatSuggestion(
-              text: opportunity.suggestedResponse,
-              type: SuggestionType.romantic,
-              confidence: 0.75,
-              explanation: opportunity.explanation,
-            ));
-            break;
-        }
-      }
-    } catch (e) {
-      print('❌ 基于雷达分析生成建议时出错: $e');
-    }
-
-    return suggestions;
-  }

@@ -1,4 +1,4 @@
-// lib/features/ai_companion/pages/companion_chat_page.dart (完全移除闪烁版)
+// lib/features/ai_companion/pages/companion_chat_page.dart (修复 UserModel.newUser 错误)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -22,7 +22,7 @@ class CompanionChatPage extends StatefulWidget {
 }
 
 class _CompanionChatPageState extends State<CompanionChatPage> {
-  late CompanionController _controller; // 改为 late，不再需要判空
+  late CompanionController _controller;
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
 
@@ -33,7 +33,7 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
     print('🟢 [ChatPage] 传入的companion: ${widget.companion}');
     print('🟢 [ChatPage] companion ID: ${widget.companion.id}');
 
-    // 关键修改：同步创建Controller，不再延迟
+    // 🔥 修复：使用正确的 UserModel.newUser 方法
     _controller = CompanionController(user: _createDummyUser());
     _controller.addListener(_onCompanionUpdate);
     print('🟢 [ChatPage] Controller同步创建完成');
@@ -104,7 +104,6 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
   Widget build(BuildContext context) {
     print('🟢 [ChatPage] build 开始 - 直接构建主界面');
 
-    // 关键修改：直接显示聊天界面，不再有加载状态判断
     return ChangeNotifierProvider.value(
       value: _controller,
       child: Scaffold(
@@ -252,7 +251,6 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
   Widget _buildMessagesList() {
     return Consumer<CompanionController>(
       builder: (context, controller, child) {
-        // 如果正在加载数据且没有消息，显示简单的加载提示
         if (controller.messages.isEmpty && controller.isLoading) {
           return const Center(
             child: Column(
@@ -266,7 +264,6 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
           );
         }
 
-        // 如果没有消息但不在加载，显示欢迎信息
         if (controller.messages.isEmpty) {
           return const Center(
             child: Text(
@@ -279,7 +276,6 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
           );
         }
 
-        // 显示消息列表
         return ListView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -449,6 +445,7 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
     );
   }
 
+  /// 🔥 修复：使用正确的 UserModel.newUser 构造方法
   UserModel _createDummyUser() {
     return UserModel.newUser(
       id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
@@ -469,7 +466,7 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
         strength: 50,
         rationality: 50,
         maturity: 50,
-        warmth: 70, // AI伴侣通常比较温暖
+        warmth: 70,
         playfulness: 60,
         elegance: 50,
         mystery: 40,
