@@ -14,8 +14,11 @@ class SettingsController extends ChangeNotifier {
 
   // Getters
   AppThemeType get currentTheme => _currentTheme;
+
   bool get soundEnabled => _soundEnabled;
+
   bool get notificationEnabled => _notificationEnabled;
+
   String get language => _language;
 
   /// 初始化设置
@@ -29,7 +32,8 @@ class SettingsController extends ChangeNotifier {
 
       // 从HiveService加载其他设置
       _soundEnabled = HiveService.getData('sound_enabled') ?? true;
-      _notificationEnabled = HiveService.getData('notification_enabled') ?? true;
+      _notificationEnabled =
+          HiveService.getData('notification_enabled') ?? true;
       _language = HiveService.getData('language') ?? 'zh';
 
       if (!_disposed) {
@@ -235,7 +239,8 @@ class SettingsController extends ChangeNotifier {
 
   /// 获取可用主题列表
   List<Map<String, dynamic>> getAvailableThemes() {
-    return AppThemeType.values.map((theme) => {
+    return AppThemeType.values.map((theme) =>
+    {
       'type': theme,
       'name': ThemeManager.getThemeName(theme),
       'description': ThemeManager.getThemeDescription(theme),
@@ -267,3 +272,4 @@ class SettingsController extends ChangeNotifier {
     super.dispose();
     print('✅ SettingsController 销毁完成');
   }
+}

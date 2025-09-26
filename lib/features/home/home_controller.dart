@@ -1,4 +1,4 @@
-// lib/features/home/home_controller.dart (修复版 - 迁移到HiveService)
+// lib/features/home/home_controller.dart (修复版 - 迁移到HiveService + 调整模块解锁条件)
 
 import 'package:flutter/foundation.dart';
 import '../../core/models/user_model.dart';
@@ -381,7 +381,7 @@ class CombatTrainingModule extends TrainingModule {
   String get category => '技能训练';
 
   @override
-  bool get isUnlocked => user != null; // 需要登录
+  bool get isUnlocked => true; // 🔥 修改：免费开放，不需要登录
 
   @override
   Future<void> launch() async {
@@ -409,13 +409,10 @@ class ConfessionPredictorModule extends TrainingModule {
   String get category => '智能分析';
 
   @override
-  int get requiredLevel => 3;
+  int get requiredLevel => 1; // 🔥 修改：降低等级要求从3到1
 
   @override
-  bool get isUnlocked =>
-      user != null &&
-      user!.userLevel.level >= requiredLevel &&
-      user!.stats.totalConversations >= 5; // 需要至少5次对话
+  bool get isUnlocked => true; // 🔥 修改：免费开放，不需要对话次数条件
 
   @override
   Future<void> launch() async {
@@ -440,13 +437,13 @@ class RealChatAssistantModule extends TrainingModule {
   String get description => '现实聊天指导，社交翻译官';
 
   @override
-  String get category => 'VIP功能';
+  String get category => '智能助手';
 
   @override
-  int get requiredLevel => 5;
+  int get requiredLevel => 1; // 🔥 修改：降低等级要求从5到1
 
   @override
-  bool get isUnlocked => user?.isVipUser == true && user!.userLevel.level >= requiredLevel;
+  bool get isUnlocked => true; // 🔥 修改：免费开放，不需要VIP条件
 
   @override
   Future<void> launch() async {

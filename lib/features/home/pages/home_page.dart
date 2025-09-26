@@ -1,4 +1,4 @@
-// lib/features/home/pages/home_page.dart (完整版 - 调整模块布局)
+// lib/features/home/pages/home_page.dart (完整版 - 第一部分)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -169,6 +169,15 @@ class _HomePageState extends State<HomePage> {
       ['basic_chat', 'ai_companion', 'batch_chat_analyzer', 'anti_pua'].contains(module.id)
     ).toList();
 
+    if (coreModules.isEmpty) {
+      return Center(
+        child: Text(
+          '暂无可用的核心训练模块',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
+        ),
+      );
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -191,6 +200,20 @@ class _HomePageState extends State<HomePage> {
       ['combat_training', 'confession_predictor', 'real_chat_assistant'].contains(module.id)
     ).toList();
 
+    print('🔍 智能辅助工具模块数量: ${assistantModules.length}');
+    for (final module in assistantModules) {
+      print('🔍 模块: ${module.name} - 解锁状态: ${module.isUnlocked}');
+    }
+
+    if (assistantModules.isEmpty) {
+      return Center(
+        child: Text(
+          '暂无可用的智能辅助工具',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
+        ),
+      );
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -206,250 +229,248 @@ class _HomePageState extends State<HomePage> {
       },
     );
   }
+  // 第二部分 - 继续 _HomePageState 类的其余方法
 
-  Widget _buildModuleCard(TrainingModule module, HomeController controller) {
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: module.isUnlocked
-          ? () => _onModuleTap(module, controller)
-          : () => _showUnlockDialog(module),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // 🔥 新增：为批量分析添加特殊标记
-              if (module.id == 'batch_chat_analyzer')
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    '🔥 核心功能',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
+    Widget _buildModuleCard(TrainingModule module, HomeController controller) {
+      return Card(
+        elevation: 2,
+        child: InkWell(
+          onTap: module.isUnlocked
+            ? () => _onModuleTap(module, controller)
+            : () => _showUnlockDialog(module),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 🔥 新增：为批量分析添加特殊标记
+                if (module.id == 'batch_chat_analyzer')
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      '🔥 核心功能',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
 
-              Text(
-                module.icon,
-                style: const TextStyle(fontSize: 32),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                module.name,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: module.isUnlocked ? null : Colors.grey,
+                Text(
+                  module.icon,
+                  style: const TextStyle(fontSize: 32),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                module.description,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: module.isUnlocked ? null : Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (!module.isUnlocked)
-                const Padding(
-                  padding: EdgeInsets.only(top: 4),
-                  child: Icon(
-                    Icons.lock,
-                    color: Colors.grey,
-                    size: 16,
+                const SizedBox(height: 8),
+                Text(
+                  module.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: module.isUnlocked ? null : Colors.grey,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  module.description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: module.isUnlocked ? Colors.grey[600] : Colors.grey[400],
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (!module.isUnlocked)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: Icon(
+                      Icons.lock,
+                      color: Colors.grey,
+                      size: 16,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget _buildGrowthTracker(UserModel? user) {
+      if (user == null) return const SizedBox();
+
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.trending_up),
+                  const SizedBox(width: 8),
+                  Text(
+                    '成长数据',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem(
+                      '对话次数',
+                      '${user.stats.totalConversations}',
+                      Icons.chat,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildStatItem(
+                      '平均好感度',
+                      '${user.stats.averageFavorability.toStringAsFixed(1)}',
+                      Icons.favorite,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem(
+                      '主导魅力',
+                      user.charmTagNames.isNotEmpty ? user.charmTagNames.first : '待发现',
+                      Icons.star,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildStatItem(
+                      '成功率',
+                      '${(user.stats.successRate * 100).toStringAsFixed(0)}%',
+                      Icons.military_tech,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildGrowthTracker(UserModel? user) {
-    if (user == null) return const SizedBox();
+    Widget _buildStatItem(String label, String value, IconData icon) {
+      return Column(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).primaryColor),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      );
+    }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.trending_up),
-                const SizedBox(width: 8),
-                Text(
-                  '成长数据',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatItem(
-                    '对话次数',
-                    '${user.stats.totalConversations}',
-                    Icons.chat,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    '平均好感度',
-                    '${user.stats.averageFavorability.toStringAsFixed(1)}',
-                    Icons.favorite,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatItem(
-                    '主导魅力',
-                    user.charmTagNames.isNotEmpty ? user.charmTagNames.first : '待发现',
-                    Icons.star,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    '成功率',
-                    '${(user.stats.successRate * 100).toStringAsFixed(0)}%',
-                    Icons.military_tech,
-                  ),
-                ),
-              ],
+    void _onModuleTap(TrainingModule module, HomeController controller) {
+      print('🔗 点击模块: ${module.name} (${module.id})');
+
+      switch (module.id) {
+        case 'basic_chat':
+          print('🔗 导航到角色选择');
+          Navigator.pushNamed(
+            context,
+            '/character_selection',
+            arguments: {'user': controller.currentUser},
+          );
+          break;
+        case 'ai_companion':
+          print('🔗 导航到伴侣选择');
+          Navigator.pushNamed(context, '/companion_selection');
+          break;
+        case 'batch_chat_analyzer': // 🔥 新增：批量分析导航
+          print('🔗 导航到批量上传');
+          Navigator.pushNamed(context, '/batch_upload');
+          break;
+        case 'combat_training':
+          print('🔗 导航到实战训练营');
+          Navigator.pushNamed(context, '/combat_menu');
+          break;
+        case 'anti_pua':
+          print('🔗 导航到反PUA训练');
+          Navigator.pushNamed(context, '/anti_pua_training');
+          break;
+        case 'confession_predictor':
+          print('🔗 导航到告白预测');
+          Navigator.pushNamed(context, '/confession_analysis');
+          break;
+        case 'real_chat_assistant':
+          print('🔗 导航到聊天助手');
+          Navigator.pushNamed(
+            context,
+            '/real_chat_assistant',
+            arguments: {'user': controller.currentUser},
+          );
+          break;
+        default:
+          print('⚠️ 未知模块ID: ${module.id}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${module.name} 功能开发中...')),
+          );
+      }
+    }
+
+    void _showUnlockDialog(TrainingModule module) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('${module.name} 暂未解锁'),
+          content: Text(module.unlockDescription),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('确定'),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, size: 20, color: Theme.of(context).primaryColor),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+    void _logout(BuildContext context) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('确认退出'),
+          content: const Text('确定要退出登录吗？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                final authController = Provider.of<AuthController>(context, listen: false);
+                authController.logout();
+              },
+              child: const Text('确定'),
+            ),
+          ],
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
-    );
-  }
-
-  void _onModuleTap(TrainingModule module, HomeController controller) {
-    switch (module.id) {
-      case 'basic_chat':
-        Navigator.pushNamed(
-          context,
-          '/character_selection',
-          arguments: {'user': controller.currentUser},
-        );
-        break;
-      case 'ai_companion':
-        Navigator.pushNamed(context, '/companion_selection');
-        break;
-      case 'batch_chat_analyzer': // 🔥 新增：批量分析导航
-        Navigator.pushNamed(context, '/batch_upload');
-        break;
-      case 'combat_training':
-        Navigator.pushNamed(context, '/combat_menu');
-        break;
-      case 'anti_pua':
-        Navigator.pushNamed(context, '/anti_pua_training');
-        break;
-      case 'confession_predictor':
-        Navigator.pushNamed(context, '/confession_analysis');
-        break;
-      case 'real_chat_assistant':
-        Navigator.pushNamed(
-          context,
-          '/real_chat_assistant',
-          arguments: {'user': controller.currentUser},
-        );
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${module.name} 功能开发中...')),
-        );
+      );
     }
   }
-
-  void _showUnlockDialog(TrainingModule module) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('${module.name} 暂未解锁'),
-        content: Text(_getUnlockCondition(module)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getUnlockCondition(TrainingModule module) {
-    switch (module.id) {
-      case 'ai_companion':
-        return '需要50个Credits才能解锁此功能';
-      case 'real_chat_assistant':
-        return '需要VIP会员才能使用此功能';
-      case 'confession_predictor':
-        return '需要完成至少5次对话才能解锁';
-      case 'combat_training':
-        return '需要登录账户才能使用';
-      default:
-        return '暂未满足解锁条件';
-    }
-  }
-
-  void _logout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认退出'),
-        content: const Text('确定要退出登录吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              final authController = Provider.of<AuthController>(context, listen: false);
-              authController.logout();
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-}
