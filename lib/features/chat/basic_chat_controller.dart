@@ -1,4 +1,4 @@
-// lib/features/chat/chat_controller.dart
+// lib/features/chat/basic_chat_controller.dart
 
 import 'package:flutter/foundation.dart';
 import '../../core/models/character_model.dart';
@@ -7,7 +7,7 @@ import '../../core/models/user_model.dart';
 import '../../core/utils/text_analyzer.dart';
 import '../../core/utils/round_calculator.dart';
 import '../../shared/services/mock_ai_service.dart';
-import '../../shared/services/storage_service.dart';
+import '../../shared/services/hive_service.dart';
 import '../../shared/services/billing_service.dart';
 
 /// 聊天控制器 - 管理聊天页面的所有状态和业务逻辑
@@ -119,8 +119,8 @@ class ChatController extends ChangeNotifier {
       // 更新对话指标
       await _updateConversationMetrics();
 
-      // 保存对话到本地
-      await StorageService.saveConversation(_currentConversation);
+      // 保存对话到本地 - 🔥 使用HiveService
+      await HiveService.saveConversation(_currentConversation);
 
     } catch (e) {
       // 发送失败时回滚用户credits
@@ -173,6 +173,9 @@ class ChatController extends ChangeNotifier {
     _currentConversation = _currentConversation.copyWith(
       metrics: updatedMetrics,
     );
+
+    // 🔥 再次保存对话 - 使用HiveService
+    await HiveService.saveConversation(_currentConversation);
   }
 
   /// 更新状态消息
@@ -208,12 +211,12 @@ class ChatController extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
-      // 保存对话
-      await StorageService.saveConversation(_currentConversation);
+      // 保存对话 - 🔥 使用HiveService
+      await HiveService.saveConversation(_currentConversation);
 
-      // 更新用户对话历史
+      // 更新用户对话历史 - 🔥 使用HiveService
       _currentUser = _currentUser.addConversationHistory(_currentConversation.id);
-      await StorageService.updateCurrentUser(_currentUser);
+      await HiveService.updateCurrentUser(_currentUser);
 
       notifyListeners();
     } catch (e) {
@@ -283,9 +286,9 @@ class ChatController extends ChangeNotifier {
 
   @override
   void dispose() {
-    // 自动保存对话状态
+    // 自动保存对话状态 - 🔥 使用HiveService
     if (messages.isNotEmpty) {
-      StorageService.saveConversation(_currentConversation);
+      HiveService.saveConversation(_currentConversation);
     }
     super.dispose();
   }

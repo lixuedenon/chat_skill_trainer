@@ -2,7 +2,7 @@
 
 import '../../core/models/user_model.dart';
 import '../../core/models/conversation_model.dart';
-import 'storage_service.dart';
+import 'hive_service.dart';
 
 /// 计费服务类
 class BillingService {
@@ -55,8 +55,8 @@ class BillingService {
 
     final updatedUser = user.consumeCredits(creditsToConsume);
 
-    // 保存到本地存储
-    await StorageService.updateCurrentUser(updatedUser);
+    // 保存到本地存储 - 🔥 使用HiveService
+    await HiveService.updateCurrentUser(updatedUser);
 
     return updatedUser;
   }
@@ -73,8 +73,8 @@ class BillingService {
       reason: reason,
     );
 
-    // 保存到本地存储
-    await StorageService.updateCurrentUser(updatedUser);
+    // 保存到本地存储 - 🔥 使用HiveService
+    await HiveService.updateCurrentUser(updatedUser);
 
     return updatedUser;
   }
@@ -102,7 +102,7 @@ class BillingService {
     // 如果是VIP套餐，更新VIP状态
     if (packageId == 'premium') {
       final vipUser = updatedUser.copyWith(isVipUser: true);
-      await StorageService.updateCurrentUser(vipUser);
+      await HiveService.updateCurrentUser(vipUser);
       return vipUser;
     }
 
@@ -187,7 +187,8 @@ class BillingService {
 
   /// 获取用户交易历史
   static Future<List<Transaction>> getUserTransactions(String userId) async {
-    // 从本地存储获取交易记录
+    // 从本地存储获取交易记录 - 🔥 使用HiveService
+    final userConversations = await HiveService.getUserConversations(userId);
     // 实际应用中应该从服务器获取
     return []; // 暂时返回空列表
   }
@@ -195,7 +196,7 @@ class BillingService {
   /// 生成账单摘要
   static Future<BillingSummary> generateBillingSummary(String userId, DateTime startDate, DateTime endDate) async {
     final transactions = await getUserTransactions(userId);
-    final userConversations = await StorageService.getUserConversations(userId);
+    final userConversations = await HiveService.getUserConversations(userId);
 
     // 筛选时间段内的数据
     final periodTransactions = transactions.where((t) =>
@@ -283,8 +284,17 @@ class BillingService {
       timestamp: DateTime.now(),
     );
 
-    // 保存到本地存储（实际应用中应该发送到服务器）
-    // await StorageService.saveTransaction(transaction);
+    // 保存到本地存储 - 🔥 使用HiveService
+    final transactionData = {
+      'id': transaction.id,
+      'userId': transaction.userId,
+      'type': transaction.type.name,
+      'amount': transaction.amount,
+      'reason': transaction.reason,
+      'timestamp': transaction.timestamp.toIso8601String(),
+    };
+
+    await HiveService.saveData('transaction_${transaction.id}', transactionData);
   }
 }
 

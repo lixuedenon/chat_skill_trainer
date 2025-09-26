@@ -2,27 +2,21 @@
 
 import '../../core/models/companion_model.dart';
 import '../../core/models/conversation_model.dart';
-import '../../shared/services/storage_service.dart';
+import '../../shared/services/hive_service.dart';
 
 /// AI伴侣记忆管理服务
 class CompanionMemoryService {
   /// 保存消息到本地存储
   static Future<void> saveMessages(String companionId, List<MessageModel> messages) async {
-    final key = 'companion_messages_$companionId';
-    final messagesData = messages.map((m) => m.toJson()).toList();
-    await StorageService.saveData(key, messagesData);
+    await HiveService.saveCompanionMessages(companionId, messages);
   }
 
   /// 从本地存储加载消息
   static Future<List<MessageModel>> loadMessages(String companionId) async {
-    final key = 'companion_messages_$companionId';
     try {
-      final data = await StorageService.getData(key);
-      if (data == null) return [];
-
-      final List<dynamic> messagesData = data;
-      return messagesData.map((item) => MessageModel.fromJson(item)).toList();
+      return await HiveService.loadCompanionMessages(companionId);
     } catch (e) {
+      print('❌ 加载伴侣消息失败: $e');
       return [];
     }
   }

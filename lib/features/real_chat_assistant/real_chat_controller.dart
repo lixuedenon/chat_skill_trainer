@@ -1,4 +1,4 @@
-// lib/features/real_chat_assistant/real_chat_controller.dart (完整修复版)
+// lib/features/real_chat_assistant/real_chat_controller.dart (修复枚举值问题)
 
 import 'package:flutter/foundation.dart';
 import '../../core/models/user_model.dart';
@@ -313,7 +313,7 @@ class RealChatController extends ChangeNotifier {
     ];
   }
 
-  /// 基于翻译结果生成建议
+  /// 基于翻译结果生成建议 - 🔥 修复枚举值问题
   List<ChatSuggestion> _generateBasedOnTranslation(SocialTranslation translation) {
     final suggestions = <ChatSuggestion>[];
 
@@ -343,7 +343,7 @@ class RealChatController extends ChangeNotifier {
             explanation: '她情绪不好，提供情感支持',
           ));
           break;
-        case EmotionalState.happy:
+        case EmotionalState.playful:
           suggestions.add(const ChatSuggestion(
             text: '看到你开心我也很高兴！',
             type: SuggestionType.sharing,
@@ -351,15 +351,13 @@ class RealChatController extends ChangeNotifier {
             explanation: '分享她的快乐情绪',
           ));
           break;
-        case EmotionalState.curious:
+        case EmotionalState.neutral:
           suggestions.add(const ChatSuggestion(
             text: '这个话题很有意思，我们可以深入聊聊',
             type: SuggestionType.engaging,
             confidence: 0.85,
-            explanation: '满足她的好奇心，深入交流',
+            explanation: '保持对话继续的通用回复',
           ));
-          break;
-        default:
           break;
       }
     } catch (e) {
