@@ -1,7 +1,7 @@
-// lib/features/combat_training/pages/combat_menu_page.dart (更新版)
+// lib/features/combat_training/pages/combat_menu_page.dart (修复UI问题)
 
 import 'package:flutter/material.dart';
-import '../../../core/constants/scenario_data.dart';
+import '../combat_scenario_data.dart';
 
 class CombatMenuPage extends StatelessWidget {
   const CombatMenuPage({Key? key}) : super(key: key);
@@ -136,7 +136,8 @@ class CombatMenuPage extends StatelessWidget {
     required String difficulty,
     required Color difficultyColor,
   }) {
-    final scenarioCount = ScenarioData.getCategoryScenarioCount(category);
+    // 🔥 修复：直接从本地数据获取场景数量，避免Future问题
+    final scenarioCount = _getScenarioCountByCategory(category);
 
     return Card(
       child: InkWell(
@@ -160,11 +161,15 @@ class CombatMenuPage extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                            // 🔥 修复：使用Flexible防止标题溢出
+                            Flexible(
+                              child: Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -189,20 +194,24 @@ class CombatMenuPage extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
+                        // 🔥 修复：防止描述文字溢出
                         Text(
                           description,
                           style: const TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                  // 🔥 修复：确保右侧内容不溢出
                   Column(
                     children: [
                       Text(
-                        '$scenarioCount题',
+                        '${scenarioCount}题',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -226,36 +235,59 @@ class CombatMenuPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              ...scenarios.map((scenario) => Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 4,
-                      decoration: const BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        scenario,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+              // 🔥 修复：场景列表布局优化，防止溢出
+              Column(
+                children: scenarios.map((scenario) => Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 4,
+                        margin: const EdgeInsets.only(top: 6),
+                        decoration: const BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              )).toList(),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          scenario,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// 🔥 新增：根据类别获取场景数量的本地方法
+  int _getScenarioCountByCategory(String category) {
+    switch (category) {
+      case 'anti_routine':
+        return CombatScenarioData.antiRoutineScenarios.length;
+      case 'workplace_crisis':
+      case 'crisis_handling':
+        return CombatScenarioData.crisisHandlingScenarios.length;
+      case 'social_crisis':
+      case 'high_difficulty':
+        return CombatScenarioData.advancedChallengeScenarios.length;
+      default:
+        return 0;
+    }
   }
 
   Widget _buildProgressCard() {
@@ -300,18 +332,18 @@ class CombatMenuPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.blue.shade200),
               ),
-              child: Column(
+              child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     '训练建议',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
+                  SizedBox(height: 4),
+                  Text(
                     '• 建议从"聚会冷场处理"开始，难度较低\n• 每个模块建议完成70%以上再进入下一个\n• 职场高危模块需谨慎，建议有一定经验后练习',
                     style: TextStyle(
                       fontSize: 12,

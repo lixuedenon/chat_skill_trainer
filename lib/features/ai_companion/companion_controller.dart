@@ -1,4 +1,4 @@
-// lib/features/ai_companion/companion_controller.dart (修复版 - 迁移到HiveService)
+// lib/features/ai_companion/companion_controller.dart (修复null check错误版本)
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -362,17 +362,29 @@ class CompanionController extends ChangeNotifier {
     }
   }
 
+  /// 🔥 修复：增强安全性的状态保存方法
   Future<void> _saveState() async {
-    if (_currentCompanion == null) return;
-    await _saveCompanion();
-    // 🔥 使用HiveService保存消息
-    await HiveService.saveCompanionMessages(_currentCompanion!.id, _messages);
+    final companion = _currentCompanion; // 获取当前引用
+    if (companion == null || _disposed) return;
+
+    try {
+      await HiveService.saveCompanion(companion);
+      await HiveService.saveCompanionMessages(companion.id, _messages);
+    } catch (e) {
+      print('❌ 保存状态失败: $e');
+    }
   }
 
+  /// 🔥 修复：简化并增强安全性的伴侣保存方法
   Future<void> _saveCompanion() async {
-    if (_currentCompanion == null) return;
-    // 🔥 使用HiveService保存伴侣
-    await HiveService.saveCompanion(_currentCompanion!);
+    final companion = _currentCompanion; // 安全获取引用
+    if (companion == null || _disposed) return;
+
+    try {
+      await HiveService.saveCompanion(companion);
+    } catch (e) {
+      print('❌ 保存伴侣失败: $e');
+    }
   }
 
   Future<void> deleteCompanion(String companionId) async {
@@ -463,20 +475,29 @@ class CompanionController extends ChangeNotifier {
     }
   }
 
-  /// 🔥 重写dispose方法，确保资源释放
+  /// 🔥 修复：优化dispose方法，防止null check错误
   @override
   void dispose() {
     print('🔄 CompanionController 销毁中...');
     _disposed = true;
 
-    // 保存最终状态
-    if (_currentCompanion != null) {
-      _saveState().catchError((e) {
+    // 🔥 修复：先保存当前状态，再清理引用
+    final companionToSave = _currentCompanion; // 保存引用
+    if (companionToSave != null) {
+      // 异步保存，但不等待完成，避免dispose过程中的阻塞
+      HiveService.saveCompanion(companionToSave).catchError((e) {
         print('❌ 销毁时保存状态失败: $e');
       });
+
+      // 如果有消息也保存
+      if (_messages.isNotEmpty) {
+        HiveService.saveCompanionMessages(companionToSave.id, _messages).catchError((e) {
+          print('❌ 销毁时保存消息失败: $e');
+        });
+      }
     }
 
-    // 清理所有引用
+    // 立即清理所有引用，防止后续访问
     _currentCompanion = null;
     _existingCompanions.clear();
     _messages.clear();

@@ -18,12 +18,12 @@ void main() async {
     print('🚀 应用启动中...');
 
     // 🔥 初始化Hive数据库 - 替代SharedPreferences
-    await HiveService.init();
+    //await HiveService.init();
     print('✅ Hive数据库初始化完成');
 
     // 🔥 预加载场景数据 - 避免首次使用时延迟
     print('🔄 预加载场景数据...');
-    await ScenarioData.loadScenarios();
+    //await ScenarioData.loadScenarios();
     print('✅ 场景数据预加载完成');
 
     print('🎉 应用初始化成功，启动UI...');

@@ -1,4 +1,4 @@
-// lib/shared/services/hive_service.dart (修复版 - 添加 HiveAdapterService)
+// lib/shared/services/hive_service.dart (修复数据类型转换问题)
 
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/models/user_model.dart';
@@ -43,6 +43,30 @@ class HiveService {
   static Box? _messagesBoxCache;
 
   static bool _isInitialized = false;
+
+  /// 🔥 安全的类型转换方法 - 解决 Map<dynamic, dynamic> 问题
+  static Map<String, dynamic> _safeJsonCast(dynamic data) {
+    if (data == null) return {};
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) {
+      try {
+        return Map<String, dynamic>.from(data);
+      } catch (e) {
+        print('❌ 类型转换失败: $e');
+        return {};
+      }
+    }
+    return {};
+  }
+
+  /// 🔥 安全的列表转换方法
+  static List<Map<String, dynamic>> _safeJsonListCast(dynamic data) {
+    if (data == null) return [];
+    if (data is List) {
+      return data.map((item) => _safeJsonCast(item)).toList();
+    }
+    return [];
+  }
 
   /// 初始化Hive
   static Future<void> init() async {
@@ -146,13 +170,14 @@ class HiveService {
     await settingsBox.put('first_launch', false);
   }
 
-  // ========== 用户相关 - 🔥 使用JSON序列化 ==========
+  // ========== 用户相关 - 🔥 使用JSON序列化 + 安全类型转换 ==========
 
   static UserModel? getCurrentUser() {
     try {
       final data = usersBox.get('current_user');
       if (data == null) return null;
-      return UserModel.fromJson(Map<String, dynamic>.from(data));
+      final safeData = _safeJsonCast(data);
+      return UserModel.fromJson(safeData);
     } catch (e) {
       print('❌ 获取当前用户失败: $e');
       return null;
@@ -189,14 +214,15 @@ class HiveService {
     try {
       final data = usersBox.get(userId);
       if (data == null) return null;
-      return UserModel.fromJson(Map<String, dynamic>.from(data));
+      final safeData = _safeJsonCast(data);
+      return UserModel.fromJson(safeData);
     } catch (e) {
       print('❌ 获取用户失败: $e');
       return null;
     }
   }
 
-  // ========== 对话相关 - 🔥 使用JSON序列化 ==========
+  // ========== 对话相关 - 🔥 使用JSON序列化 + 安全类型转换 ==========
 
   static Future<void> saveConversation(ConversationModel conversation) async {
     try {
@@ -211,7 +237,8 @@ class HiveService {
     try {
       final data = conversationsBox.get(conversationId);
       if (data == null) return null;
-      return ConversationModel.fromJson(Map<String, dynamic>.from(data));
+      final safeData = _safeJsonCast(data);
+      return ConversationModel.fromJson(safeData);
     } catch (e) {
       print('❌ 获取对话失败: $e');
       return null;
@@ -226,12 +253,14 @@ class HiveService {
         final data = conversationsBox.get(key);
         if (data != null) {
           try {
-            final conversation = ConversationModel.fromJson(Map<String, dynamic>.from(data));
+            final safeData = _safeJsonCast(data);
+            final conversation = ConversationModel.fromJson(safeData);
             if (conversation.userId == userId) {
               userConversations.add(conversation);
             }
           } catch (e) {
-            print('❌ 解析对话数据失败: $e');
+            print('❌ 解析对话数据失败: $e，删除损坏数据');
+            await conversationsBox.delete(key);
           }
         }
       }
@@ -252,9 +281,10 @@ class HiveService {
         final data = conversationsBox.get(key);
         if (data != null) {
           try {
-            conversations.add(ConversationModel.fromJson(Map<String, dynamic>.from(data)));
+            final safeData = _safeJsonCast(data);
+            conversations.add(ConversationModel.fromJson(safeData));
           } catch (e) {
-            print('❌ 解析对话数据失败: $e');
+            print('❌ 解析对话数据失败: $e，跳过损坏数据');
           }
         }
       }
@@ -282,7 +312,8 @@ class HiveService {
         final data = conversationsBox.get(key);
         if (data != null) {
           try {
-            final conversation = ConversationModel.fromJson(Map<String, dynamic>.from(data));
+            final safeData = _safeJsonCast(data);
+            final conversation = ConversationModel.fromJson(safeData);
             if (conversation.userId == userId) count++;
           } catch (e) {
             // 忽略解析错误
@@ -296,7 +327,7 @@ class HiveService {
     }
   }
 
-  // ========== 分析报告相关 - 🔥 使用JSON序列化 ==========
+  // ========== 分析报告相关 - 🔥 使用JSON序列化 + 安全类型转换 ==========
 
   static Future<void> saveAnalysisReport(AnalysisReport report) async {
     try {
@@ -311,7 +342,8 @@ class HiveService {
     try {
       final data = analysisReportsBox.get(reportId);
       if (data == null) return null;
-      return AnalysisReport.fromJson(Map<String, dynamic>.from(data));
+      final safeData = _safeJsonCast(data);
+      return AnalysisReport.fromJson(safeData);
     } catch (e) {
       print('❌ 获取分析报告失败: $e');
       return null;
@@ -324,7 +356,8 @@ class HiveService {
         final data = analysisReportsBox.get(key);
         if (data != null) {
           try {
-            final report = AnalysisReport.fromJson(Map<String, dynamic>.from(data));
+            final safeData = _safeJsonCast(data);
+            final report = AnalysisReport.fromJson(safeData);
             if (report.conversationId == conversationId) {
               return report;
             }
@@ -348,12 +381,14 @@ class HiveService {
         final data = analysisReportsBox.get(key);
         if (data != null) {
           try {
-            final report = AnalysisReport.fromJson(Map<String, dynamic>.from(data));
+            final safeData = _safeJsonCast(data);
+            final report = AnalysisReport.fromJson(safeData);
             if (report.userId == userId) {
               userReports.add(report);
             }
           } catch (e) {
-            print('❌ 解析分析报告数据失败: $e');
+            print('❌ 解析分析报告数据失败: $e，删除损坏数据');
+            await analysisReportsBox.delete(key);
           }
         }
       }
@@ -374,9 +409,10 @@ class HiveService {
         final data = analysisReportsBox.get(key);
         if (data != null) {
           try {
-            reports.add(AnalysisReport.fromJson(Map<String, dynamic>.from(data)));
+            final safeData = _safeJsonCast(data);
+            reports.add(AnalysisReport.fromJson(safeData));
           } catch (e) {
-            print('❌ 解析分析报告数据失败: $e');
+            print('❌ 解析分析报告数据失败: $e，跳过损坏数据');
           }
         }
       }
@@ -393,7 +429,7 @@ class HiveService {
     print('✅ 分析报告已删除: $reportId');
   }
 
-  // ========== AI伴侣相关 - 🔥 使用JSON序列化 ==========
+  // ========== AI伴侣相关 - 🔥 使用JSON序列化 + 安全类型转换 ==========
 
   static Future<void> saveCompanion(CompanionModel companion) async {
     try {
@@ -408,33 +444,63 @@ class HiveService {
     try {
       final data = companionsBox.get(companionId);
       if (data == null) return null;
-      return CompanionModel.fromJson(Map<String, dynamic>.from(data));
+      final safeData = _safeJsonCast(data);
+      return CompanionModel.fromJson(safeData);
     } catch (e) {
       print('❌ 获取AI伴侣失败: $e');
       return null;
     }
   }
 
+  /// 🔥 修复：getCompanions方法增强错误处理和数据清理
   static List<CompanionModel> getCompanions() {
     try {
       final companions = <CompanionModel>[];
+      final keysToDelete = <String>[];
 
       for (final key in companionsBox.keys) {
         final data = companionsBox.get(key);
         if (data != null) {
           try {
-            companions.add(CompanionModel.fromJson(Map<String, dynamic>.from(data)));
+            final safeData = _safeJsonCast(data);
+            if (safeData.isNotEmpty) {
+              companions.add(CompanionModel.fromJson(safeData));
+            } else {
+              print('⚠️ 空数据，标记删除: $key');
+              keysToDelete.add(key.toString());
+            }
           } catch (e) {
-            print('❌ 解析AI伴侣数据失败: $e');
+            print('❌ 解析AI伴侣数据失败: $e，标记删除损坏数据: $key');
+            keysToDelete.add(key.toString());
           }
         }
       }
 
+      // 异步清理损坏的数据
+      if (keysToDelete.isNotEmpty) {
+        _cleanupCorruptedData(keysToDelete);
+      }
+
+      print('✅ 成功加载 ${companions.length} 个AI伴侣');
       return companions;
     } catch (e) {
       print('❌ 获取AI伴侣列表失败: $e');
       return [];
     }
+  }
+
+  /// 🔥 异步清理损坏的数据
+  static void _cleanupCorruptedData(List<String> keys) {
+    Future.microtask(() async {
+      try {
+        for (final key in keys) {
+          await companionsBox.delete(key);
+        }
+        print('✅ 已清理 ${keys.length} 个损坏的数据条目');
+      } catch (e) {
+        print('❌ 清理损坏数据失败: $e');
+      }
+    });
   }
 
   static Future<List<CompanionModel>> getUserCompanions(String userId) async {
@@ -447,7 +513,7 @@ class HiveService {
     print('✅ AI伴侣已删除: $companionId');
   }
 
-  // ========== AI伴侣消息存储 ==========
+  // ========== AI伴侣消息存储 - 🔥 增强安全性 ==========
 
   static Future<void> saveCompanionMessages(String companionId, List<MessageModel> messages) async {
     try {
@@ -467,9 +533,16 @@ class HiveService {
       if (data == null) return [];
 
       final List<dynamic> messagesData = data;
-      final messages = messagesData
-          .map((item) => MessageModel.fromJson(Map<String, dynamic>.from(item)))
-          .toList();
+      final messages = <MessageModel>[];
+
+      for (final item in messagesData) {
+        try {
+          final safeData = _safeJsonCast(item);
+          messages.add(MessageModel.fromJson(safeData));
+        } catch (e) {
+          print('❌ 解析消息数据失败: $e，跳过此条消息');
+        }
+      }
 
       print('✅ 伴侣消息已加载: $companionId, 共${messages.length}条消息');
       return messages;
@@ -606,7 +679,7 @@ class HiveService {
     return null;
   }
 
-  // ========== 导出用户数据 ==========
+  // ========== 导出用户数据 - 🔥 增强安全性 ==========
 
   static Future<Map<String, dynamic>> exportUserData(String userId) async {
     try {
@@ -639,36 +712,31 @@ class HiveService {
       print('🔄 开始导入用户数据...');
 
       if (importData['user'] != null) {
-        final user = UserModel.fromJson(importData['user']);
+        final userData = _safeJsonCast(importData['user']);
+        final user = UserModel.fromJson(userData);
         await saveUser(user);
       }
 
       if (importData['conversations'] != null) {
-        final conversations = (importData['conversations'] as List)
-            .map((data) => ConversationModel.fromJson(data))
-            .toList();
-
-        for (final conversation in conversations) {
+        final conversationsData = _safeJsonListCast(importData['conversations']);
+        for (final data in conversationsData) {
+          final conversation = ConversationModel.fromJson(data);
           await saveConversation(conversation);
         }
       }
 
       if (importData['analysis_reports'] != null) {
-        final reports = (importData['analysis_reports'] as List)
-            .map((data) => AnalysisReport.fromJson(data))
-            .toList();
-
-        for (final report in reports) {
+        final reportsData = _safeJsonListCast(importData['analysis_reports']);
+        for (final data in reportsData) {
+          final report = AnalysisReport.fromJson(data);
           await saveAnalysisReport(report);
         }
       }
 
       if (importData['companions'] != null) {
-        final companions = (importData['companions'] as List)
-            .map((data) => CompanionModel.fromJson(data))
-            .toList();
-
-        for (final companion in companions) {
+        final companionsData = _safeJsonListCast(importData['companions']);
+        for (final data in companionsData) {
+          final companion = CompanionModel.fromJson(data);
           await saveCompanion(companion);
         }
       }

@@ -1,4 +1,4 @@
-// lib/features/ai_companion/pages/companion_chat_page.dart (修复 UserModel.newUser 错误)
+// lib/features/ai_companion/pages/companion_chat_page.dart (修复输入焦点问题)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +25,7 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
   late CompanionController _controller;
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode(); // 🔥 新增：焦点管理
 
   @override
   void initState() {
@@ -42,6 +43,8 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _initializeCompanionData();
+        // 🔥 新增：页面加载完成后自动聚焦到输入框
+        _focusNode.requestFocus();
       }
     });
   }
@@ -96,6 +99,7 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
     _controller.dispose();
     _scrollController.dispose();
     _textController.dispose();
+    _focusNode.dispose(); // 🔥 新增：释放焦点节点
     print('🟢 [ChatPage] dispose 完成');
     super.dispose();
   }
@@ -308,6 +312,7 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
               Expanded(
                 child: TextField(
                   controller: _textController,
+                  focusNode: _focusNode, // 🔥 新增：绑定焦点节点
                   enabled: controller.canSendMessage && !controller.showEndingSequence,
                   decoration: InputDecoration(
                     hintText: controller.showEndingSequence
@@ -326,6 +331,12 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
                   onSubmitted: (text) {
                     if (text.trim().isNotEmpty && controller.canSendMessage) {
                       _sendMessage(controller);
+                    }
+                  },
+                  // 🔥 新增：点击消息列表时重新聚焦到输入框
+                  onTap: () {
+                    if (!_focusNode.hasFocus) {
+                      _focusNode.requestFocus();
                     }
                   },
                 ),
@@ -361,11 +372,22 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
     );
   }
 
+  /// 🔥 修复：发送消息后重新聚焦到输入框
   void _sendMessage(CompanionController controller) {
     final text = _textController.text.trim();
     if (text.isNotEmpty) {
+      // 发送消息
       controller.sendMessage(text);
+
+      // 清空输入框
       _textController.clear();
+
+      // 🔥 关键修复：重新聚焦到输入框
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _focusNode.canRequestFocus) {
+          _focusNode.requestFocus();
+        }
+      });
     }
   }
 
@@ -426,6 +448,12 @@ class _CompanionChatPageState extends State<CompanionChatPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('重新开始成功')),
                   );
+                  // 🔥 新增：重置后重新聚焦到输入框
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _focusNode.canRequestFocus) {
+                      _focusNode.requestFocus();
+                    }
+                  });
                 }
               } catch (e) {
                 if (mounted) {
